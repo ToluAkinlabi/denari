@@ -366,7 +366,7 @@ export async function getDashboardData(
     const dashboardData: DashboardData = {
       currentPeriod: {
         id: currentPeriod.id,
-        index: getPayCycleIndex(currentPeriod.startDate),
+        index: getPayCycleIndex(currentPeriod.startDate) + 1,
         startDate: currentPeriod.startDate.toISOString(),
         endDate: currentPeriod.endDate.toISOString(),
         isReconciled: currentPeriod.status === 'RECONCILED',

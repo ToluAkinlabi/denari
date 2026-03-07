@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 /**
  * Get all categories for a user
@@ -81,5 +82,23 @@ export async function getExpenseCategories(userId: string) {
 export async function getSavingsCategories(userId: string) {
   return prisma.category.findMany({
     where: { userId, countsAsSavings: true },
+  });
+}
+
+/**
+ * Create a new category
+ */
+export async function createCategory(data: {
+  userId: string;
+  name: string;
+  type: Prisma.CategoryUncheckedCreateInput['type'];
+  group: Prisma.CategoryUncheckedCreateInput['group'];
+  color: string;
+  countsAsExpense: boolean;
+  countsAsSavings: boolean;
+  icon?: string;
+}) {
+  return prisma.category.create({
+    data,
   });
 }

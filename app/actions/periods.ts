@@ -319,7 +319,7 @@ export async function getPeriodDetail(
         id: period.id,
         startDate: period.startDate.toISOString(),
         endDate: period.endDate.toISOString(),
-        index: getPayCycleIndex(period.startDate),
+        index: getPayCycleIndex(period.startDate) + 1,
         openingCash: period.openingCash.toString(),
         income: income.toString(),
         spending: spending.toString(),
@@ -347,11 +347,11 @@ export async function getPeriodDetail(
  * @param count Number of periods to fetch (default 12)
  */
 export async function getRecentPeriods(
-  count: number = 12,
+  options?: { page?: number; pageSize?: number },
   userId?: string
 ): Promise<
-  ApiResponse<
-    Array<{
+  ApiResponse<{
+    items: Array<{
       id: string;
       index: number;
       startDate: string;
@@ -359,12 +359,22 @@ export async function getRecentPeriods(
       income: string;
       wealth: string;
       isReconciled: boolean;
-    }>
-  >
+    }>;
+    total: number;
+    page: number;
+    pageSize: number;
+  }>
 > {
   try {
     const resolvedUserId = await usersRepo.resolveUserId(userId);
-    const periods = await periodsRepo.getRecentPeriods(resolvedUserId, count);
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 10;
+    
+    // Fetch all periods to get total count and paginate
+    const allPeriods = await periodsRepo.getRecentPeriods(resolvedUserId, 999);
+    const total = allPeriods.length;
+    const start = (page - 1) * pageSize;
+    const periods = allPeriods.slice(start, start + pageSize);
 
     const result = await Promise.all(
       periods.map(async (period: {
@@ -397,7 +407,7 @@ export async function getRecentPeriods(
 
         return {
           id: period.id,
-          index: getPayCycleIndex(period.startDate),
+          index: getPayCycleIndex(period.startDate) + 1,
           startDate: period.startDate.toISOString(),
           endDate: period.endDate.toISOString(),
           income: income.toString(),
@@ -409,7 +419,12 @@ export async function getRecentPeriods(
 
     return {
       success: true,
-      data: result,
+      data: {
+        items: result,
+        total,
+        page,
+        pageSize,
+      },
     };
   } catch (error) {
     console.error('getRecentPeriods error:', error);

@@ -11,6 +11,7 @@ interface DashboardContentProps {
 export function DashboardContent({ data }: DashboardContentProps) {
   const score = Number(data.scorecard.overall);
   const health = getHealthIndicator(score);
+  const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
 
   return (
     <div className="space-y-6">
@@ -35,7 +36,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
             <div>
               <p className="text-sm text-muted mb-1">Wealth Created</p>
               <p className="text-3xl font-bold text-sky-600">${data.wealthMetrics.created}</p>
-              <p className="text-xs text-muted mt-1">Income - Real Spending</p>
+              <p className="text-xs text-muted mt-1">Income - Real Spending (Savings + Remaining Income)</p>
             </div>
             <TrendingUp size={32} className="text-sky-500" />
           </div>
@@ -86,7 +87,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
           <StatCard
             label="Period"
             value={`#${data.currentPeriod.index}`}
-            subtitle={`${new Date(data.currentPeriod.endDate).toLocaleDateString()}`}
+            subtitle={periodStart}
             icon="📅"
           />
         </div>

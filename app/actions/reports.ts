@@ -29,7 +29,11 @@ export interface MonthlyReportData {
   savings: string;
   wealthCreated: string;
   categoryBreakdown: Array<{ category: string; amount: string; percentage: string }>;
+  periodLabels: string[];
+  trendIncome: string[];
   trendSpending: string[];
+  trendSavings: string[];
+  trendWealth: string[];
 }
 
 type LedgerEntryLike = {
@@ -69,12 +73,21 @@ export async function getMonthlyReport(
     );
 
     const periodSummaries = await Promise.all(
-      periods.map(async (period: { id: string }) => {
+      periods.map(async (period: { id: string; startDate: Date }) => {
         const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+        const income = calculateIncome(entries);
+        const spending = calculateTotalSpending(entries, categoryMap);
+        const savings = calculateSavingsTransfers(entries, categoryMap);
         return {
-          income: calculateIncome(entries),
-          spending: calculateTotalSpending(entries, categoryMap),
-          savings: calculateSavingsTransfers(entries, categoryMap),
+          label: period.startDate.toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            timeZone: 'UTC',
+          }),
+          income,
+          spending,
+          savings,
+          wealth: income.minus(spending),
           entries,
         };
       })
@@ -114,7 +127,11 @@ export async function getMonthlyReport(
         savings: totals.savings.toFixed(2),
         wealthCreated: totals.wealthCreated.toFixed(2),
         categoryBreakdown,
+        periodLabels: periodSummaries.map((p: { label: string }) => p.label),
+        trendIncome: periodSummaries.map((p: { income: Decimal }) => p.income.toFixed(2)),
         trendSpending: periodSummaries.map((p: { spending: Decimal }) => p.spending.toFixed(2)),
+        trendSavings: periodSummaries.map((p: { savings: Decimal }) => p.savings.toFixed(2)),
+        trendWealth: periodSummaries.map((p: { wealth: Decimal }) => p.wealth.toFixed(2)),
       },
     };
   } catch (error) {

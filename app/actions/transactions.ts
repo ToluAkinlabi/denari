@@ -8,6 +8,7 @@
 'use server';
 
 import { Decimal } from '@prisma/client/runtime/library';
+import type { CategoryGroup, CategoryType } from '@prisma/client';
 import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
 import {
   transactionSchema,
@@ -40,6 +41,49 @@ async function resolveUserId(userId?: string) {
   return user.id;
 }
 
+/**
+ * Ensure default categories exist for a user
+ * Creates essential categories if none exist
+ */
+async function ensureDefaultCategories(userId: string) {
+  const existing = await categoriesRepo.getCategoriesForUser(userId);
+  if (existing.length > 0) {
+    return existing;
+  }
+
+  // Create essential default categories
+  const defaultCategories: Array<{
+    name: string;
+    type: CategoryType;
+    group: CategoryGroup;
+    color: string;
+    countsAsExpense: boolean;
+    countsAsSavings: boolean;
+  }> = [
+    { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', countsAsExpense: false, countsAsSavings: false },
+    { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false },
+    { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true },
+  ];
+
+  const created = await Promise.all(
+    defaultCategories.map((cat) =>
+      categoriesRepo.createCategory({
+        userId,
+        ...cat,
+      })
+    )
+  );
+
+  return created;
+}
+
 export async function getAddEntryOptions(
   userId?: string
 ): Promise<
@@ -55,20 +99,19 @@ export async function getAddEntryOptions(
   try {
     const resolvedUserId = await resolveUserId(userId);
 
-    const period = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
-    if (!period) {
-      return {
-        success: false,
-        error: 'No active period found',
-      };
-    }
+    // Ensure categories exist (create defaults if empty database)
+    const categories = await ensureDefaultCategories(resolvedUserId);
 
-    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
+    // Get or create current period
+    const existingPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
+    const periodId = existingPeriod
+      ? existingPeriod.id
+      : (await periodsRepo.ensurePeriodForDateAndUser(resolvedUserId, new Date())).id;
 
     return {
       success: true,
       data: {
-        periodId: period.id,
+        periodId,
         categories: categories.map((c: { id: string; name: string; type: string }) => ({
           id: c.id,
           name: c.name,
