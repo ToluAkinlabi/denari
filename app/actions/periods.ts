@@ -156,22 +156,42 @@ export async function reconcilePeriod(
           categoryId: miscCategory.id,
           description:
             data.entryToBalance.description || 'Reconciliation adjustment',
-          entryType: difference.isNegative() ? 'INCOME' : 'EXPENSE',
+          // If actual < expected (negative difference), reduce expected via expense.
+          // If actual > expected (positive difference), increase expected via income.
+          entryType: difference.isNegative() ? 'EXPENSE' : 'INCOME',
           periodId: data.periodId,
           userId: resolvedUserId,
         });
 
-        // Mark period as reconciled
-        await periodsRepo.updatePeriod(data.periodId, {
-          status: 'RECONCILED',
-        });
+        // Recompute after adjustment before deciding reconciliation state.
+        const updatedEntries = await ledgerRepo.getLedgerEntriesForPeriod(data.periodId);
+        const updatedIncome = calculateIncome(updatedEntries);
+        const updatedSpending = calculateTotalSpending(updatedEntries, categoryMap);
+        const updatedSavings = calculateSavingsTransfers(updatedEntries, categoryMap);
+        const updatedExpectedCash = calculateExpectedCash(
+          period.openingCash,
+          updatedIncome,
+          updatedSpending,
+          updatedSavings
+        );
+        const updatedDifference = calculateReconciliationDifference(updatedExpectedCash, actualCash);
+        const updatedReconciled = isReconciled(updatedDifference);
+
+        if (updatedReconciled) {
+          await periodsRepo.updatePeriod(data.periodId, {
+            status: 'RECONCILED',
+          });
+        }
 
         return {
           success: true,
           data: {
             ...result,
-            reconciled: true,
-            balanceAction: 'Adjustment entry created and period reconciled',
+            reconciled: updatedReconciled,
+            difference: updatedDifference.toString(),
+            balanceAction: updatedReconciled
+              ? 'Adjustment entry created and period reconciled'
+              : 'Adjustment entry created; period still not reconciled. Re-run reconcile with actual cash.',
           },
         };
       }

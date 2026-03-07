@@ -84,6 +84,31 @@ export const transactionSchema = z.object({
 export type TransactionInput = z.infer<typeof transactionSchema>;
 
 /**
+ * Summary Entry Schema
+ *
+ * Validates a summary ledger entry for hybrid input model.
+ * Used when user provides total for a category instead of individual transactions.
+ */
+export const summaryEntrySchema = z.object({
+  amount: positiveCurrencySchema,
+  categoryId: idSchema,
+  description: z
+    .string()
+    .min(1, 'Description required')
+    .max(200, 'Description too long'),
+  date: z
+    .date()
+    .refine(
+      (d) => d <= new Date(),
+      'Cannot create transactions for future dates'
+    ),
+  periodId: idSchema.optional(),
+  notes: z.string().max(500, 'Notes too long').optional(),
+});
+
+export type SummaryEntryInput = z.infer<typeof summaryEntrySchema>;
+
+/**
  * Bulk Transaction Schema
  *
  * Validates multiple transactions at once.

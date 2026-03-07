@@ -29,41 +29,41 @@ export interface ParsedQuickEntry {
  */
 const CATEGORY_KEYWORDS: Record<string, string> = {
   // Income
-  paycheck: 'paycheck',
-  salary: 'paycheck',
-  wage: 'paycheck',
-  income: 'paycheck',
-  payment: 'paycheck',
+  paycheck: 'income',
+  salary: 'income',
+  wage: 'income',
+  income: 'income',
+  payment: 'income',
 
   // Groceries
-  grocery: 'groceries',
-  groceries: 'groceries',
-  costco: 'groceries',
-  wholefoods: 'groceries',
-  trader: 'groceries',
+  grocery: 'grocery',
+  groceries: 'grocery',
+  costco: 'grocery',
+  wholefoods: 'grocery',
+  trader: 'grocery',
 
   // Dining
-  lunch: 'dining',
-  breakfast: 'dining',
-  dinner: 'dining',
-  restaurant: 'dining',
-  coffee: 'dining',
-  cafe: 'dining',
-  pizza: 'dining',
+  lunch: 'spend',
+  breakfast: 'spend',
+  dinner: 'spend',
+  restaurant: 'spend',
+  coffee: 'spend',
+  cafe: 'spend',
+  pizza: 'spend',
 
   // Gas
-  gas: 'transportation',
-  fuel: 'transportation',
-  shell: 'transportation',
-  chevron: 'transportation',
-  exxon: 'transportation',
+  gas: 'other',
+  fuel: 'other',
+  shell: 'other',
+  chevron: 'other',
+  exxon: 'other',
 
   // Transportation
-  uber: 'transportation',
-  lyft: 'transportation',
-  transit: 'transportation',
-  parking: 'transportation',
-  bus: 'transportation',
+  uber: 'other',
+  lyft: 'other',
+  transit: 'other',
+  parking: 'other',
+  bus: 'other',
 
   // Savings
   savings: 'savings',
@@ -72,27 +72,35 @@ const CATEGORY_KEYWORDS: Record<string, string> = {
   fund: 'savings',
 
   // Entertainment
-  movie: 'entertainment',
-  cinema: 'entertainment',
-  theater: 'entertainment',
-  concert: 'entertainment',
-  game: 'entertainment',
-  spotify: 'entertainment',
-  netflix: 'entertainment',
+  movie: 'misc',
+  cinema: 'misc',
+  theater: 'misc',
+  concert: 'misc',
+  game: 'misc',
+  spotify: 'misc',
+  netflix: 'misc',
 
   // Utilities
-  electric: 'utilities',
-  water: 'utilities',
-  internet: 'utilities',
-  phone: 'utilities',
-  utility: 'utilities',
+  electric: 'other',
+  water: 'other',
+  internet: 'other',
+  phone: 'phone',
+  utility: 'other',
 
   // Healthcare
-  doctor: 'healthcare',
-  pharmacy: 'healthcare',
-  medical: 'healthcare',
-  clinic: 'healthcare',
-  dental: 'healthcare',
+  doctor: 'other',
+  pharmacy: 'other',
+  medical: 'other',
+  clinic: 'other',
+  dental: 'other',
+  rent: 'rent',
+  debt: 'debt',
+  loan: 'debt',
+  partnership: 'partnership',
+  tithe: 'partnership',
+  misc: 'misc',
+  other: 'other',
+  spend: 'spend',
 };
 
 /**
@@ -250,15 +258,16 @@ export function buildDescription(remainder: string, category: string): string {
 
   // Generate from category
   const categoryDisplay: Record<string, string> = {
-    paycheck: 'Paycheck',
-    groceries: 'Groceries',
-    dining: 'Dining Out',
-    transportation: 'Transportation',
+    income: 'Income',
+    grocery: 'Grocery',
+    spend: 'Spend',
+    phone: 'Phone',
+    rent: 'Rent',
+    debt: 'Debt',
+    partnership: 'Partnership',
+    other: 'Other',
+    misc: 'Misc',
     savings: 'Savings Transfer',
-    entertainment: 'Entertainment',
-    utilities: 'Utilities',
-    healthcare: 'Healthcare',
-    misc: 'Expense',
   };
 
   return categoryDisplay[category.toLowerCase()] || 'Entry';

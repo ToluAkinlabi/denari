@@ -13,6 +13,7 @@ import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome, calculateSavingsTransfers } from '@/lib/finance/wealth';
+import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
 import { calculateTotalSpending, calculateSpendingByCategory } from '@/lib/finance/spending';
 import { aggregateMonthly } from '@/lib/finance/monthly';
 
@@ -72,9 +73,17 @@ export async function getMonthlyReport(
       ])
     );
 
-    const periodSummaries = await Promise.all(
-      periods.map(async (period: { id: string; startDate: Date }) => {
+    const periodSummaries = await (async () => {
+      // Batch fetch: get all entries for all periods at once
+      const entriesByPeriod = new Map<string, (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[]>();
+      for (const period of periods) {
         const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+        entriesByPeriod.set(period.id, entries);
+      }
+
+      // Calculate summaries using pre-fetched entries
+      return periods.map((period: { id: string; startDate: Date }) => {
+        const entries = entriesByPeriod.get(period.id) || [];
         const income = calculateIncome(entries);
         const spending = calculateTotalSpending(entries, categoryMap);
         const savings = calculateSavingsTransfers(entries, categoryMap);
@@ -90,8 +99,8 @@ export async function getMonthlyReport(
           wealth: income.minus(spending),
           entries,
         };
-      })
-    );
+      });
+    })();
 
     const totals = aggregateMonthly(
       periodSummaries.map((p: {

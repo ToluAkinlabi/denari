@@ -82,8 +82,9 @@ export function calculateWealthCreated(
   spending: Decimal
 ): Decimal {
   const wealth = income.minus(spending);
-  // Ensure non-negative (can be zero or negative if spending > income)
-  return wealth.greaterThan(0) ? wealth : new Decimal(0);
+  // Allow negative wealth to surface financial deficits truthfully
+  // Negative wealth indicates overspending relative to income
+  return wealth;
 }
 
 /**

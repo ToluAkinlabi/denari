@@ -8,6 +8,7 @@
 'use server';
 
 import { Decimal } from '@prisma/client/runtime/library';
+import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
@@ -52,6 +53,14 @@ export interface DashboardData {
     endDate: string;
     isReconciled: boolean;
   };
+  paceMetrics: {
+    day: number;
+    totalDays: number;
+    dailyBudget: string;
+    expectedSpend: string;
+    actualSpend: string;
+    status: 'GREEN' | 'YELLOW' | 'RED';
+  };
   cashMetrics: {
     opening: string;
     income: string;
@@ -63,6 +72,7 @@ export interface DashboardData {
   };
   wealthMetrics: {
     created: string;
+    isNegative: boolean;
     savingsRate: string;
     isSavingsHealthy: boolean;
     spendingPercentage: string;
@@ -198,6 +208,41 @@ export async function getDashboardData(
       : currentSpending.dividedBy(currentIncome).times(100);
     const spendingControlled = spendingPercent.lessThanOrEqualTo(70);
 
+    // Pace metrics calculation
+    const periodStart = currentPeriod.startDate;
+    const periodEnd = currentPeriod.endDate;
+    const today = new Date();
+    const daysElapsed = Math.ceil(
+      (today.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const totalPeriodDays = Math.ceil(
+      (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const dailyBudget = currentIncome.equals(0)
+      ? new Decimal(0)
+      : currentIncome.dividedBy(totalPeriodDays);
+    const expectedSpend = dailyBudget.times(daysElapsed);
+    
+    // Pace status: GREEN (under pace), YELLOW (near pace ~90-110%), RED (overspending)
+    const paceRatio = expectedSpend.equals(0)
+      ? new Decimal(0)
+      : currentSpending.dividedBy(expectedSpend);
+    let paceStatus: 'GREEN' | 'YELLOW' | 'RED' = 'GREEN';
+    if (paceRatio.greaterThanOrEqualTo(1.1)) {
+      paceStatus = 'RED';
+    } else if (paceRatio.greaterThanOrEqualTo(0.9)) {
+      paceStatus = 'YELLOW';
+    }
+
+    const paceMetrics = {
+      day: Math.min(daysElapsed, totalPeriodDays),
+      totalDays: totalPeriodDays,
+      dailyBudget: dailyBudget.toString(),
+      expectedSpend: expectedSpend.toString(),
+      actualSpend: currentSpending.toString(),
+      status: paceStatus,
+    };
+
     // Category breakdown
     const categoryBreakdown = calculateSpendingByCategory(
       currentEntries,
@@ -238,18 +283,26 @@ export async function getDashboardData(
       };
     });
 
-    // Scorecard
+    // Scorecard - Optimize: fetch all entries for recent periods in one query batch
     const recentPeriods = await periodsRepo.getRecentPeriods(resolvedUserId, 4);
-    const recentData = await Promise.all(
-      recentPeriods.map(async (p: { id: string; status: string }) => {
-        const entries = await ledgerRepo.getLedgerEntriesForPeriod(p.id);
-        const income = calculateIncome(entries);
-        const spending = calculateTotalSpending(entries, categoryMap);
-        const savings = calculateSavingsTransfers(entries, categoryMap);
-        const wealth = calculateWealthCreated(income, spending);
-        return { income, spending, savings, wealth };
-      })
-    );
+    
+    // Batch fetch: get all entries for recent periods together instead of N+1 queries
+    const entriesByPeriod = new Map<string, (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[]>();
+    if (recentPeriods.length > 0) {
+      for (const period of recentPeriods) {
+        const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+        entriesByPeriod.set(period.id, entries);
+      }
+    }
+
+    const recentData = recentPeriods.map((p: { id: string; status: string }) => {
+      const entries = entriesByPeriod.get(p.id) || [];
+      const income = calculateIncome(entries);
+      const spending = calculateTotalSpending(entries, categoryMap);
+      const savings = calculateSavingsTransfers(entries, categoryMap);
+      const wealth = calculateWealthCreated(income, spending);
+      return { income, spending, savings, wealth };
+    });
 
     const savingsDiscipline = evaluateSavingsDiscipline(currentIncome, currentSavings);
     const expenseControl = evaluateExpenseControl(currentIncome, currentSpending);
@@ -371,6 +424,7 @@ export async function getDashboardData(
         endDate: currentPeriod.endDate.toISOString(),
         isReconciled: currentPeriod.status === 'RECONCILED',
       },
+      paceMetrics,
       cashMetrics: {
         opening: currentPeriod.openingCash.toString(),
         income: currentIncome.toString(),
@@ -382,6 +436,7 @@ export async function getDashboardData(
       },
       wealthMetrics: {
         created: currentWealth.toString(),
+        isNegative: currentWealth.isNegative(),
         savingsRate: savingsRate.toFixed(1) + '%',
         isSavingsHealthy: savingsHealthy,
         spendingPercentage: spendingPercent.toFixed(1) + '%',

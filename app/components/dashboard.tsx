@@ -31,14 +31,14 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className={data.wealthMetrics.isNegative ? 'p-6 border-red-200 bg-red-50' : 'p-6'}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted mb-1">Wealth Created</p>
-              <p className="text-3xl font-bold text-sky-600">${data.wealthMetrics.created}</p>
-              <p className="text-xs text-muted mt-1">Income - Real Spending (Savings + Remaining Income)</p>
+              <p className="text-sm text-muted mb-1">{data.wealthMetrics.isNegative ? 'Wealth Deficit' : 'Wealth Created'}</p>
+              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-600' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
+              <p className="text-xs text-muted mt-1">{data.wealthMetrics.isNegative ? 'Spending exceeds income - deficit period' : 'Income - Real Spending (Savings + Remaining Income)'}</p>
             </div>
-            <TrendingUp size={32} className="text-sky-500" />
+            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-500' : 'text-sky-500'} />
           </div>
         </Card>
 
@@ -90,6 +90,47 @@ export function DashboardContent({ data }: DashboardContentProps) {
             subtitle={periodStart}
             icon="📅"
           />
+        </div>
+      </Card>
+
+      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-200 bg-red-50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}`}>
+        <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">Day {data.paceMetrics.day} of {data.paceMetrics.totalDays}</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded ${
+              data.paceMetrics.status === 'RED'
+                ? 'bg-red-200 text-red-800'
+                : data.paceMetrics.status === 'YELLOW'
+                ? 'bg-yellow-200 text-yellow-800'
+                : 'bg-green-200 text-green-800'
+            }`}>
+              {data.paceMetrics.status === 'RED' ? 'Overspending' : data.paceMetrics.status === 'YELLOW' ? 'On Pace' : 'Under Budget'}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="text-center">
+              <p className="text-muted">Daily Budget</p>
+              <p className="font-semibold text-sm">${data.paceMetrics.dailyBudget}</p>
+            </div>
+            <div className="text-center border-l border-r border-gray-300 dark:border-gray-600">
+              <p className="text-muted">Expected</p>
+              <p className="font-semibold text-sm">${data.paceMetrics.expectedSpend}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-muted">Actual</p>
+              <p className="font-semibold text-sm">${data.paceMetrics.actualSpend}</p>
+            </div>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div className={`h-2 rounded-full ${
+              data.paceMetrics.status === 'RED'
+                ? 'bg-red-500'
+                : data.paceMetrics.status === 'YELLOW'
+                ? 'bg-yellow-500'
+                : 'bg-green-500'
+            }`} style={{ width: `${Math.min(100, (parseFloat(data.paceMetrics.actualSpend) / parseFloat(data.paceMetrics.expectedSpend)) * 100)}%` }}></div>
+          </div>
         </div>
       </Card>
 

@@ -13,6 +13,7 @@ import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
 import {
   transactionSchema,
   quickEntrySchema,
+  summaryEntrySchema,
   backlogImportSchema,
   validate,
   formatValidationErrors,
@@ -195,14 +196,7 @@ export async function addQuickEntry(
 
     // Step 5: Get or create period for date
     const entryDate = validationError.date || new Date();
-    const period = await periodsRepo.getPeriodForDateAndUser(userId, entryDate);
-
-    if (!period) {
-      return {
-        success: false,
-        error: 'Period not found for date',
-      };
-    }
+    const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
 
     // Step 6: Create ledger entry
     const entry = await ledgerRepo.createLedgerEntry({
@@ -424,6 +418,153 @@ export async function importBacklogEntries(
       data: { imported, failed, errors },
     };
   } catch (error) {
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
+ * Add summary entry (hybrid input mode)
+ *
+ * Creates a SUMMARY_ENTRY when user provides a total for a category
+ * instead of individual transactions.
+ *
+ * Double-count prevention:
+ *   If existing EXPENSE entries exist in the same category+period,
+ *   returns a warning with the collision details.
+ *   User can choose to:
+ *   1. Replace all transactions with this summary
+ *   2. Merge the summary amount into existing total
+ *   3. Cancel and manage transactions individually
+ *
+ * @example
+ *   const result = await addSummaryEntry({
+ *     amount: "500",
+ *     categoryId: "...",
+ *     description: "Groceries for the period",
+ *     date: new Date(),
+ *     periodId: "..."
+ *   })
+ *
+ * @returns {success: true, data: {id, description}} or
+ *          {success: false, error, collision: {existing_count, existing_total}}
+ */
+export async function addSummaryEntry(
+  input: unknown
+): Promise<
+  ApiResponse<{
+    id: string;
+    description: string;
+    collision?: {
+      existingCount: number;
+      existingTotal: string;
+      action: 'CONFIRM_REPLACE' | 'CONFIRM_MERGE' | 'CANCEL';
+    };
+  }>
+> {
+  try {
+    const userId = await resolveUserId();
+
+    // Step 1: Validate schema
+    const [valid, validationError] = validate(summaryEntrySchema, input);
+    if (!valid) {
+      return {
+        success: false,
+        error: formatValidationErrors(validationError),
+      };
+    }
+
+    const data = validationError;
+
+    // Step 2: Verify category
+    const category = await categoriesRepo.getCategoryById(data.categoryId);
+    if (!category) {
+      return {
+        success: false,
+        error: 'Category not found',
+      };
+    }
+
+    // Step 3: Resolve period for date
+    const date = data.date;
+    let resolvedPeriodId = data.periodId;
+    const selectedPeriod = data.periodId
+      ? await periodsRepo.getPeriodById(data.periodId)
+      : null;
+
+    if (!selectedPeriod || date < selectedPeriod.startDate || date > selectedPeriod.endDate) {
+      const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
+      resolvedPeriodId = resolvedPeriod.id;
+    }
+
+    const finalPeriodId =
+      resolvedPeriodId ||
+      (await periodsRepo.ensurePeriodForDateAndUser(userId, date)).id;
+
+    // Step 4: CHECK FOR DOUBLE-COUNTING
+    // Query all EXPENSE entries for this category in this period
+    const existingEntries = await ledgerRepo.getLedgerEntriesByCategory(
+      finalPeriodId,
+      data.categoryId
+    );
+
+    const expenseEntries = existingEntries.filter(
+      (e) => e.entryType === 'EXPENSE'
+    );
+
+    if (expenseEntries.length > 0) {
+      // Collision detected: user provided individual txns, now trying to add a summary
+      const existingTotal = expenseEntries
+        .reduce((sum, e) => sum.plus(e.amount), new Decimal(0))
+        .toString();
+
+      return {
+        success: false,
+        error: `Collision: ${expenseEntries.length} existing transactions found in ${category.name} for this period.`,
+        data: {
+          id: '',
+          description: '',
+          collision: {
+            existingCount: expenseEntries.length,
+            existingTotal: existingTotal,
+            action: 'CONFIRM_REPLACE',
+          },
+        },
+      };
+    }
+
+    // Step 5: No collision - create summary entry
+    const entry = await ledgerRepo.createLedgerEntry({
+      date: data.date,
+      amount: new Decimal(data.amount),
+      categoryId: data.categoryId,
+      description: data.description,
+      entryType: 'SUMMARY_ENTRY',
+      periodId: finalPeriodId,
+      userId,
+    });
+
+    // Step 6: Attach notes if provided
+    if (data.notes && data.notes.trim()) {
+      await notesRepo.createNote({
+        userId,
+        periodId: finalPeriodId,
+        ledgerEntryId: entry.id,
+        content: data.notes.trim(),
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        id: entry.id,
+        description: entry.description || '',
+      },
+    };
+  } catch (error) {
+    console.error('addSummaryEntry error:', error);
     return {
       success: false,
       error: `Server error: ${(error as Error).message}`,
