@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Ledge icon">
+  <rect width="256" height="256" rx="48" fill="#0ea5e9"/>
+  <path d="M64 176V80h24v72h104v24H64z" fill="#ffffff"/>
+  <path d="M112 128h24v48h-24zM152 104h24v72h-24z" fill="#bae6fd"/>
+</svg>

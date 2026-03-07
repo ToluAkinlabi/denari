@@ -1,0 +1,108 @@
+'use client';
+
+import { Card } from '@/components/card';
+import { Bell, Moon, Lock, Database, HelpCircle, LogOut } from 'lucide-react';
+
+export default function SettingsPage() {
+  return (
+    <div className="max-w-screen-sm mx-auto px-4 py-6">
+      <div className="space-y-6 pb-10">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted">Preferences and data</p>
+        </div>
+
+        {/* Appearance */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Appearance</h3>
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
+              <div className="flex items-center gap-3">
+                <Moon size={20} className="text-gray-600 dark:text-gray-400" />
+                <span>Dark Mode</span>
+              </div>
+              <input type="checkbox" defaultChecked className="w-5 h-5" />
+            </button>
+          </Card>
+        </div>
+
+        {/* Notifications */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Notifications</h3>
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
+              <div className="flex items-center gap-3">
+                <Bell size={20} className="text-gray-600 dark:text-gray-400" />
+                <span>Period Reminders</span>
+              </div>
+              <input type="checkbox" defaultChecked className="w-5 h-5" />
+            </button>
+          </Card>
+        </div>
+
+        {/* Data */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Data</h3>
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <Database size={20} className="text-gray-600 dark:text-gray-400" />
+                <div className="text-left">
+                  <span className="block">Export Data</span>
+                  <span className="text-xs text-muted">Export as CSV</span>
+                </div>
+              </div>
+              <span className="text-xl">→</span>
+            </button>
+            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <Database size={20} className="text-gray-600 dark:text-gray-400" />
+                <div className="text-left">
+                  <span className="block">Backup</span>
+                  <span className="text-xs text-muted">Create a backup</span>
+                </div>
+              </div>
+              <span className="text-xl">→</span>
+            </button>
+            <button className="w-full flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <Lock size={20} className="text-orange-600" />
+                <div className="text-left">
+                  <span className="block text-orange-600">Reset All Data</span>
+                  <span className="text-xs text-muted">Irreversible</span>
+                </div>
+              </div>
+              <span className="text-xl">→</span>
+            </button>
+          </Card>
+        </div>
+
+        {/* Support */}
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Support</h3>
+          <Card className="p-4">
+            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <HelpCircle size={20} className="text-gray-600 dark:text-gray-400" />
+                <span>Help & Feedback</span>
+              </div>
+              <span className="text-xl">→</span>
+            </button>
+            <button className="w-full flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm">v1.0.0</span>
+              </div>
+              <span className="text-xs text-muted">Version</span>
+            </button>
+          </Card>
+        </div>
+
+        {/* Logout */}
+        <button className="w-full py-3 px-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg font-medium flex items-center justify-center gap-2">
+          <LogOut size={18} />
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
