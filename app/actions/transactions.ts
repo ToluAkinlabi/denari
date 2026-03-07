@@ -717,10 +717,12 @@ export async function getTransactions(
   filters?: {
     type?: 'INCOME' | 'EXPENSE' | 'SAVINGS';
     categoryId?: string;
+    limit?: number;
+    offset?: number;
   }
 ): Promise<
-  ApiResponse<
-    Array<{
+  ApiResponse<{
+    transactions: Array<{
       id: string;
       date: string;
       description: string;
@@ -728,8 +730,9 @@ export async function getTransactions(
       type: string;
       categoryName?: string;
       categoryId?: string;
-    }>
-  >
+    }>;
+    total: number;
+  }>
 > {
   try {
     const userId = await resolveUserId();
@@ -744,13 +747,20 @@ export async function getTransactions(
       entries = entries.filter((e: { categoryId: string }) => e.categoryId === filters.categoryId);
     }
 
+    const total = entries.length;
+
+    // Apply pagination
+    const limit = filters?.limit ?? 10;
+    const offset = filters?.offset ?? 0;
+    const paginatedEntries = entries.slice(offset, offset + limit);
+
     // Format for response
     const categories = await categoriesRepo.getCategoriesForUser(userId);
     const categoryMap = new Map<string, { id: string; name: string }>(
       categories.map((c: { id: string; name: string }) => [c.id, c])
     );
 
-    const formatted = entries.map((e) => ({
+    const formatted = paginatedEntries.map((e) => ({
       id: e.id,
       date: e.date.toISOString(),
       description: e.description || '',
@@ -762,7 +772,10 @@ export async function getTransactions(
 
     return {
       success: true,
-      data: formatted,
+      data: {
+        transactions: formatted,
+        total,
+      },
     };
   } catch (error) {
     console.error('getTransactions error:', error);

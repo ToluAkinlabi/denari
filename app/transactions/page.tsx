@@ -18,6 +18,8 @@ interface Transaction {
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [currentPeriodId, setCurrentPeriodId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,9 @@ export default function TransactionsPage() {
     description: '',
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   useEffect(() => {
     loadTransactions();
@@ -46,10 +51,15 @@ export default function TransactionsPage() {
       const periodId = dashboardResponse.data.currentPeriod.id;
       setCurrentPeriodId(periodId);
 
-      // Get transactions for current period
-      const response = await getTransactions(periodId);
+      // Get transactions for current period with pagination
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+      const response = await getTransactions(periodId, {
+        limit: ITEMS_PER_PAGE,
+        offset,
+      });
       if (response.success && response.data) {
-        setTransactions(response.data);
+        setTransactions(response.data.transactions);
+        setTotalCount(response.data.total);
         setError(null);
       } else {
         setError(response.error ?? 'Could not load transactions');
@@ -59,6 +69,13 @@ export default function TransactionsPage() {
     }
     setLoading(false);
   }
+
+  // Reload when page changes
+  useEffect(() => {
+    if (currentPeriodId) {
+      loadTransactions();
+    }
+  }, [currentPage]);
 
   async function handleDelete(id: string) {
     const response = await deleteTransaction(id);
