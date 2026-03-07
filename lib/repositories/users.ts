@@ -6,24 +6,61 @@
  */
 
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
 
 /**
  * Get or create default user
  * For personal use, we use a single "Default User"
  */
 export async function getOrCreateDefaultUser() {
-  const existingUser = await prisma.user.findFirst({
-    where: { name: 'Default User' },
+  // Prefer the seeded single-user account.
+  const personalUser = await prisma.user.findFirst({
+    where: { name: 'Personal' },
+    orderBy: { createdAt: 'asc' },
   });
 
-  if (existingUser) return existingUser;
+  if (personalUser) return personalUser;
+
+  // Support legacy naming if present.
+  const legacyUser = await prisma.user.findFirst({
+    where: { name: 'Default User' },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (legacyUser) return legacyUser;
+
+  // If names were changed, pick the first user that already has financial data.
+  const userWithData = await prisma.user.findFirst({
+    where: {
+      categories: { some: {} },
+      periods: { some: {} },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (userWithData) return userWithData;
+
+  // Fallback to any existing user to avoid creating duplicates unnecessarily.
+  const anyUser = await prisma.user.findFirst({
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (anyUser) return anyUser;
 
   return prisma.user.create({
     data: {
       name: 'Personal',
     },
   });
+}
+
+/**
+ * Resolve a user id for server actions.
+ * Uses explicit user id when provided, otherwise falls back to single app user.
+ */
+export async function resolveUserId(userId?: string) {
+  if (userId) return userId;
+  const user = await getOrCreateDefaultUser();
+  return user.id;
 }
 
 /**

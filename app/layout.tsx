@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Providers } from './providers';
 import { Navigation } from '@/components/navigation';
+import { DevSwGuard } from '@/components/dev-sw-guard';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
         <Providers>
+          <DevSwGuard />
           <div className="min-h-screen flex flex-col">
             <main className="flex-1 pb-20">
               {children}

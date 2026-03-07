@@ -38,6 +38,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+
+  // Never cache framework/runtime assets to avoid stale chunk/module mismatches.
+  if (
+    requestUrl.pathname.startsWith('/_next/') ||
+    requestUrl.pathname.endsWith('.hot-update.json') ||
+    requestUrl.pathname.includes('webpack-hmr')
+  ) {
+    return;
+  }
+
   // Skip API calls (let them fail gracefully)
   if (event.request.url.includes('/api/')) {
     event.respondWith(

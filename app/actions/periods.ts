@@ -16,6 +16,7 @@ import {
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
+import * as usersRepo from '@/lib/repositories/users';
 import {
   calculateExpectedCash,
   calculateReconciliationDifference,
@@ -57,7 +58,7 @@ export interface ApiResponse<T> {
  */
 export async function reconcilePeriod(
   input: unknown,
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<
   ApiResponse<{
     reconciled: boolean;
@@ -68,6 +69,7 @@ export async function reconcilePeriod(
   }>
 > {
   try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
     // Step 1: Validate
     const [valid, validationError] = validate(reconciliationSchema, input);
     if (!valid) {
@@ -96,7 +98,7 @@ export async function reconcilePeriod(
       string,
       { type: string; countsAsExpense: boolean; countsAsSavings: boolean }
     >();
-    const categories = await categoriesRepo.getCategoriesForUser(userId);
+    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     categories.forEach((c: {
       id: string;
       type: string;
@@ -156,7 +158,7 @@ export async function reconcilePeriod(
             data.entryToBalance.description || 'Reconciliation adjustment',
           entryType: difference.isNegative() ? 'INCOME' : 'EXPENSE',
           periodId: data.periodId,
-          userId,
+          userId: resolvedUserId,
         });
 
         // Mark period as reconciled
@@ -258,7 +260,7 @@ export async function updatePeriodOpeningCash(
  */
 export async function getPeriodDetail(
   periodId: string,
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<
   ApiResponse<{
     id: string;
@@ -276,6 +278,7 @@ export async function getPeriodDetail(
   }>
 > {
   try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
     const period = await periodsRepo.getPeriodById(periodId);
     if (!period) {
       return {
@@ -287,7 +290,7 @@ export async function getPeriodDetail(
     const entries = await ledgerRepo.getLedgerEntriesForPeriod(periodId);
 
     const categoryMap = new Map<string, { countsAsExpense: boolean; countsAsSavings: boolean }>();
-    const categories = await categoriesRepo.getCategoriesForUser(userId);
+    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     categories.forEach((c: {
       id: string;
       countsAsExpense: boolean | null;
@@ -345,7 +348,7 @@ export async function getPeriodDetail(
  */
 export async function getRecentPeriods(
   count: number = 12,
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<
   ApiResponse<
     Array<{
@@ -360,7 +363,8 @@ export async function getRecentPeriods(
   >
 > {
   try {
-    const periods = await periodsRepo.getRecentPeriods(userId, count);
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
+    const periods = await periodsRepo.getRecentPeriods(resolvedUserId, count);
 
     const result = await Promise.all(
       periods.map(async (period: {
@@ -375,7 +379,7 @@ export async function getRecentPeriods(
           string,
           { countsAsExpense: boolean; countsAsSavings: boolean }
         >();
-        const categories = await categoriesRepo.getCategoriesForUser(userId);
+        const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
         categories.forEach((c: {
           id: string;
           countsAsExpense: boolean | null;

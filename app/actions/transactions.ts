@@ -12,6 +12,7 @@ import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
 import {
   transactionSchema,
   quickEntrySchema,
+  backlogImportSchema,
   validate,
   formatValidationErrors,
 } from '@/lib/validators/schemas';
@@ -20,6 +21,7 @@ import * as categoriesRepo from '@/lib/repositories/categories';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
+import * as notesRepo from '@/lib/repositories/notes';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -243,14 +245,23 @@ export async function addTransaction(
       };
     }
 
-    // Step 3: Verify period
-    const period = await periodsRepo.getPeriodById(data.periodId);
-    if (!period) {
-      return {
-        success: false,
-        error: 'Period not found',
-      };
+    // Step 3: Resolve period for transaction date
+    const date = data.date;
+    let resolvedPeriodId = data.periodId;
+    const selectedPeriod = data.periodId
+      ? await periodsRepo.getPeriodById(data.periodId)
+      : null;
+
+    // If UI sends a period for "today" but user picks a historical date,
+    // map to the correct period for that date.
+    if (!selectedPeriod || date < selectedPeriod.startDate || date > selectedPeriod.endDate) {
+      const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
+      resolvedPeriodId = resolvedPeriod.id;
     }
+
+    const finalPeriodId =
+      resolvedPeriodId ||
+      (await periodsRepo.ensurePeriodForDateAndUser(userId, date)).id;
 
     // Step 4: Create entry
     const entry = await ledgerRepo.createLedgerEntry({
@@ -259,7 +270,7 @@ export async function addTransaction(
       categoryId: data.categoryId,
       description: data.description,
       entryType: toLedgerEntryType(data.entryType),
-      periodId: data.periodId,
+      periodId: finalPeriodId,
       userId,
     });
 
@@ -290,6 +301,94 @@ export async function addTransaction(
 }
 
 /**
+ * Import historical entries in bulk from pasted spreadsheet rows.
+ */
+export async function importBacklogEntries(
+  input: unknown
+): Promise<ApiResponse<{ imported: number; failed: number; errors: string[] }>> {
+  try {
+    const userId = await resolveUserId();
+    const [valid, validationError] = validate(backlogImportSchema, input);
+
+    if (!valid) {
+      return {
+        success: false,
+        error: formatValidationErrors(validationError),
+      };
+    }
+
+    const categories = await categoriesRepo.getCategoriesForUser(userId);
+    const categoryByName = new Map(
+      categories.map((c: { id: string; name: string; type: string }) => [
+        c.name.toLowerCase(),
+        c,
+      ])
+    );
+
+    let imported = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < validationError.rows.length; i++) {
+      const row = validationError.rows[i];
+
+      try {
+        const category = categoryByName.get(row.categoryName.toLowerCase());
+        if (!category) {
+          throw new Error(`Unknown category "${row.categoryName}"`);
+        }
+
+        const period = await periodsRepo.ensurePeriodForDateAndUser(userId, row.date);
+        const type = row.entryType || (category.type === 'INCOME' ? 'INCOME' : category.type === 'SAVINGS' ? 'SAVINGS' : 'EXPENSE');
+
+        const entry = await ledgerRepo.createLedgerEntry({
+          date: row.date,
+          amount: new Decimal(row.amount),
+          categoryId: category.id,
+          description: row.description || category.name,
+          entryType: toLedgerEntryType(type),
+          periodId: period.id,
+          userId,
+        });
+
+        if (type === 'SAVINGS') {
+          await savingsRepo.createAllocation({
+            ledgerEntryId: entry.id,
+            bucket: category.name,
+            amount: new Decimal(row.amount),
+            userId,
+          });
+        }
+
+        if (row.note && row.note.trim()) {
+          await notesRepo.createNote({
+            userId,
+            periodId: period.id,
+            ledgerEntryId: entry.id,
+            content: row.note.trim(),
+          });
+        }
+
+        imported++;
+      } catch (err) {
+        failed++;
+        errors.push(`Row ${i + 1}: ${(err as Error).message}`);
+      }
+    }
+
+    return {
+      success: true,
+      data: { imported, failed, errors },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
  * Delete transaction
  *
  * Removes ledger entry and associated savings allocations.
@@ -299,12 +398,13 @@ export async function addTransaction(
  */
 export async function deleteTransaction(
   entryId: string,
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<ApiResponse<null>> {
   try {
+    const resolvedUserId = await resolveUserId(userId);
     // Verify entry exists and belongs to user
     const entry = await ledgerRepo.getLedgerEntryById(entryId);
-    if (!entry || entry.userId !== userId) {
+    if (!entry || entry.userId !== resolvedUserId) {
       return {
         success: false,
         error: 'Entry not found',
@@ -348,12 +448,13 @@ export async function updateTransaction(
     description: string;
     categoryId: string;
   }>,
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<ApiResponse<{ id: string }>> {
   try {
+    const resolvedUserId = await resolveUserId(userId);
     // Verify ownership
     const entry = await ledgerRepo.getLedgerEntryById(entryId);
-    if (!entry || entry.userId !== userId) {
+    if (!entry || entry.userId !== resolvedUserId) {
       return {
         success: false,
         error: 'Entry not found',
@@ -393,7 +494,7 @@ export async function updateTransaction(
           ledgerEntryId: entryId,
           bucket,
           amount: new Decimal(updates.amount),
-          userId,
+          userId: resolvedUserId,
         });
       }
     }

@@ -12,6 +12,7 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as savingsRepo from '@/lib/repositories/savings';
+import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
 import { calculateTotalSpending, calculateSpendingByCategory } from '@/lib/finance/spending';
 import {
@@ -130,16 +131,17 @@ export async function getDashboardData(
     compareTo?: 'PREVIOUS' | 'AVERAGE';
     includeProjection?: boolean;
   },
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<ApiResponse<DashboardData>> {
   try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
     const compareTo = options?.compareTo ?? 'PREVIOUS';
     const includeProjection = options?.includeProjection ?? true;
 
     // Fetch current period or provided period
     const currentPeriod = options?.periodId
       ? await periodsRepo.getPeriodById(options.periodId)
-      : await periodsRepo.getCurrentPeriodForUser(userId);
+      : await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
 
     if (!currentPeriod) {
       return {
@@ -152,7 +154,7 @@ export async function getDashboardData(
     const currentEntries = await ledgerRepo.getLedgerEntriesForPeriod(
       currentPeriod.id
     );
-    const categories = await categoriesRepo.getCategoriesForUser(userId);
+    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     const categoryMap = new Map<
       string,
       {
@@ -214,7 +216,7 @@ export async function getDashboardData(
     });
 
     // Savings recap
-    const allAllocations = await savingsRepo.getAllBucketsForUser(userId);
+    const allAllocations = await savingsRepo.getAllBucketsForUser(resolvedUserId);
     const buckets = new Map<string, Decimal>();
 
     allAllocations.forEach((a: { bucket: string; amount: unknown }) => {
@@ -237,7 +239,7 @@ export async function getDashboardData(
     });
 
     // Scorecard
-    const recentPeriods = await periodsRepo.getRecentPeriods(userId, 4);
+    const recentPeriods = await periodsRepo.getRecentPeriods(resolvedUserId, 4);
     const recentData = await Promise.all(
       recentPeriods.map(async (p: { id: string; status: string }) => {
         const entries = await ledgerRepo.getLedgerEntriesForPeriod(p.id);
@@ -424,7 +426,7 @@ export async function getDashboardData(
  * Returns only essential metrics.
  */
 export async function getDashboardSummary(
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<
   ApiResponse<{
     cash: string;

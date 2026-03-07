@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+const idSchema = z.string().min(1, 'Invalid ID');
+
 /**
  * Decimal validator
  *
@@ -62,7 +64,7 @@ export type QuickEntryInput = z.infer<typeof quickEntrySchema>;
  */
 export const transactionSchema = z.object({
   amount: positiveCurrencySchema,
-  categoryId: z.string().uuid('Invalid category ID'),
+  categoryId: idSchema,
   description: z
     .string()
     .min(1, 'Description required')
@@ -74,7 +76,7 @@ export const transactionSchema = z.object({
       (d) => d <= new Date(),
       'Cannot create transactions for future dates'
     ),
-  periodId: z.string().uuid('Invalid period ID'),
+  periodId: idSchema.optional(),
   tags: z.array(z.string()).max(5, 'Too many tags').optional(),
   notes: z.string().max(500, 'Notes too long').optional(),
 });
@@ -95,12 +97,35 @@ export const bulkTransactionSchema = z.object({
 export type BulkTransactionInput = z.infer<typeof bulkTransactionSchema>;
 
 /**
+ * Backlog Import Schema
+ *
+ * Accepts historical rows from pasted spreadsheet data.
+ */
+export const backlogImportSchema = z.object({
+  rows: z
+    .array(
+      z.object({
+        date: z.date(),
+        amount: positiveCurrencySchema,
+        categoryName: z.string().min(1).max(100),
+        entryType: z.enum(['INCOME', 'EXPENSE', 'SAVINGS']).optional(),
+        description: z.string().max(200).optional(),
+        note: z.string().max(1000).optional(),
+      })
+    )
+    .min(1)
+    .max(1000),
+});
+
+export type BacklogImportInput = z.infer<typeof backlogImportSchema>;
+
+/**
  * Savings Allocation Schema
  *
  * Validates savings allocation entry.
  */
 export const savingsAllocationSchema = z.object({
-  entryId: z.string().uuid('Invalid entry ID'),
+  entryId: idSchema,
   bucket: z
     .string()
     .min(1, 'Bucket name required')
@@ -117,7 +142,7 @@ export type SavingsAllocationInput = z.infer<typeof savingsAllocationSchema>;
  * Validates period reconciliation entry.
  */
 export const reconciliationSchema = z.object({
-  periodId: z.string().uuid('Invalid period ID'),
+  periodId: idSchema,
   actualCash: positiveCurrencySchema,
   notes: z.string().max(500).optional(),
   entryToBalance: z
@@ -136,7 +161,7 @@ export type ReconciliationInput = z.infer<typeof reconciliationSchema>;
  * Validates period opening cash input.
  */
 export const periodOpeningCashSchema = z.object({
-  periodId: z.string().uuid('Invalid period ID'),
+  periodId: idSchema,
   openingCash: positiveCurrencySchema,
 });
 
@@ -148,7 +173,7 @@ export type PeriodOpeningCashInput = z.infer<typeof periodOpeningCashSchema>;
  * Validates category updates.
  */
 export const updateCategorySchema = z.object({
-  categoryId: z.string().uuid('Invalid category ID'),
+  categoryId: idSchema,
   name: z.string().min(1).max(50).optional(),
   countsAsExpense: z.boolean().optional(),
   countsAsSavings: z.boolean().optional(),
@@ -188,8 +213,8 @@ export const noteSchema = z.object({
     .string()
     .min(1, 'Note cannot be empty')
     .max(1000, 'Note too long'),
-  entryId: z.string().uuid().optional(),
-  periodId: z.string().uuid().optional(),
+  entryId: idSchema.optional(),
+  periodId: idSchema.optional(),
 });
 
 export type NoteInput = z.infer<typeof noteSchema>;
@@ -200,7 +225,7 @@ export type NoteInput = z.infer<typeof noteSchema>;
  * Validates dashboard data request parameters.
  */
 export const dashboardQuerySchema = z.object({
-  periodId: z.string().uuid().optional(),
+  periodId: idSchema.optional(),
   compareTo: z.enum(['PREVIOUS', 'AVERAGE']).default('PREVIOUS'),
   includeProjection: z.boolean().default(true),
 });
@@ -245,7 +270,7 @@ export const searchSchema = z.object({
   type: z.enum(['TRANSACTION', 'CATEGORY', 'NOTE']).optional(),
   dateFrom: z.date().optional(),
   dateTo: z.date().optional(),
-  categoryId: z.string().uuid().optional(),
+  categoryId: idSchema.optional(),
   minAmount: decimalSchema.optional(),
   maxAmount: decimalSchema.optional(),
 });

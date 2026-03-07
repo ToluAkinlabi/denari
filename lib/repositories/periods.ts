@@ -9,7 +9,7 @@
 
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
-import { getPeriodForDate } from '@/lib/periods';
+import { formatPeriodLabel, getPeriodForDate } from '@/lib/periods';
 
 /**
  * Get period by ID with all related data
@@ -121,13 +121,34 @@ export async function getRecentPeriods(userId: string, count: number = 6) {
  * Create a new period
  */
 export async function createPeriod(
-  data: Prisma.PeriodCreateInput
+  data: Prisma.PeriodCreateInput | Prisma.PeriodUncheckedCreateInput
 ) {
   return prisma.period.create({
     data,
     include: {
       ledgerEntries: true,
     },
+  });
+}
+
+/**
+ * Get or create the period for a specific transaction date.
+ */
+export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
+  const existing = await getPeriodForDateAndUser(userId, date);
+  if (existing) {
+    return existing;
+  }
+
+  const periodWindow = getPeriodForDate(date);
+  return createPeriod({
+    userId,
+    label: formatPeriodLabel(periodWindow.startDate, periodWindow.endDate),
+    payDate: periodWindow.payDate,
+    startDate: periodWindow.startDate,
+    endDate: periodWindow.endDate,
+    openingCash: 0,
+    status: 'OPEN',
   });
 }
 

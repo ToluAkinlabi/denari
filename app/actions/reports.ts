@@ -11,6 +11,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
+import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome, calculateSavingsTransfers } from '@/lib/finance/wealth';
 import { calculateTotalSpending, calculateSpendingByCategory } from '@/lib/finance/spending';
 import { aggregateMonthly } from '@/lib/finance/monthly';
@@ -39,14 +40,15 @@ type LedgerEntryLike = {
 
 export async function getMonthlyReport(
   month: Date = new Date(),
-  userId: string = 'default-user'
+  userId?: string
 ): Promise<ApiResponse<MonthlyReportData>> {
   try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    const periods = await periodsRepo.getPeriodsInRange(userId, monthStart, monthEnd);
-    const categories = await categoriesRepo.getCategoriesForUser(userId);
+    const periods = await periodsRepo.getPeriodsInRange(resolvedUserId, monthStart, monthEnd);
+    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     const categoryMap = new Map<
       string,
       { name: string; countsAsExpense: boolean; countsAsSavings: boolean }

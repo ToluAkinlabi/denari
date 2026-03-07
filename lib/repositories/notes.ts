@@ -30,7 +30,9 @@ export async function getNotesForEntry(ledgerEntryId: string) {
 /**
  * Create note
  */
-export async function createNote(data: Prisma.NoteCreateInput) {
+export async function createNote(
+  data: Prisma.NoteCreateInput | Prisma.NoteUncheckedCreateInput
+) {
   return prisma.note.create({
     data,
   });

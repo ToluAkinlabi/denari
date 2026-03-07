@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "prisma db push",
+    "db:clean": "node prisma/clean.js",
+    "db:fresh": "npm run db:push && npm run db:clean && npm run db:seed",
     "db:seed": "node prisma/seed.js",
     "db:reset": "prisma migrate reset",
     "prisma:generate": "prisma generate"
