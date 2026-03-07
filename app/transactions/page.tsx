@@ -37,22 +37,10 @@ export default function TransactionsPage() {
     loadTransactions();
   }, []);
 
-  async function loadTransactions() {
+  async function loadTransactionPage(periodId: string, page: number) {
     setLoading(true);
     try {
-      // Get current period first
-      const dashboardResponse = await getDashboardData();
-      if (!dashboardResponse.success || !dashboardResponse.data) {
-        setError('Could not load current period');
-        setLoading(false);
-        return;
-      }
-
-      const periodId = dashboardResponse.data.currentPeriod.id;
-      setCurrentPeriodId(periodId);
-
-      // Get transactions for current period with pagination
-      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+      const offset = (page - 1) * ITEMS_PER_PAGE;
       const response = await getTransactions(periodId, {
         limit: ITEMS_PER_PAGE,
         offset,
@@ -70,10 +58,33 @@ export default function TransactionsPage() {
     setLoading(false);
   }
 
+  async function loadTransactions() {
+    setLoading(true);
+    try {
+      // Get current period first
+      const dashboardResponse = await getDashboardData();
+      if (!dashboardResponse.success || !dashboardResponse.data) {
+        setError('Could not load current period');
+        setLoading(false);
+        return;
+      }
+
+      const periodId = dashboardResponse.data.currentPeriod.id;
+      setCurrentPeriodId(periodId);
+
+      // Load first page
+      await loadTransactionPage(periodId, 1);
+      setCurrentPage(1);
+    } catch (err) {
+      setError('Unexpected error loading transactions');
+      setLoading(false);
+    }
+  }
+
   // Reload when page changes
   useEffect(() => {
-    if (currentPeriodId) {
-      loadTransactions();
+    if (currentPeriodId && currentPage > 0) {
+      loadTransactionPage(currentPeriodId, currentPage);
     }
   }, [currentPage]);
 
@@ -271,6 +282,46 @@ export default function TransactionsPage() {
                 </Card>
               );
             })}
+            {/* Pagination Controls */}
+            {totalCount > 0 && (
+              <div className="flex items-center justify-between gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-muted">
+                  Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{' '}
+                  {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-md text-sm transition-colors ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

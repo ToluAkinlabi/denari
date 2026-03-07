@@ -12,6 +12,8 @@ export function DashboardContent({ data }: DashboardContentProps) {
   const score = Number(data.scorecard.overall);
   const health = getHealthIndicator(score);
   const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
+  const periodEnd = new Date(data.currentPeriod.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
+  const periodRange = `${periodStart} - ${periodEnd}`;
 
   return (
     <div className="space-y-6">
@@ -87,7 +89,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
           <StatCard
             label="Period"
             value={`#${data.currentPeriod.index}`}
-            subtitle={periodStart}
+            subtitle={periodRange}
             icon="📅"
           />
         </div>
