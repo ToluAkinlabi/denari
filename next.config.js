@@ -4,6 +4,9 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
+  outputFileTracingIncludes: {
+    '/**/*': ['node_modules/.prisma/client/**/*', 'prisma/schema.prisma'],
+  },
   experimental: {
     optimizePackageImports: ['@prisma/client'],
   },
