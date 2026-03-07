@@ -9,6 +9,7 @@
 
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { formatPeriodLabel, getPeriodForDate } from '@/lib/periods';
 
 /**
@@ -133,6 +134,7 @@ export async function createPeriod(
 
 /**
  * Get or create the period for a specific transaction date.
+ * Automatically carries forward the ending balance from the previous period.
  */
 export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
   const existing = await getPeriodForDateAndUser(userId, date);
@@ -141,13 +143,34 @@ export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
   }
 
   const periodWindow = getPeriodForDate(date);
+  
+  // Get the previous period to carry forward its ending balance
+  const previousPeriod = await prisma.period.findFirst({
+    where: {
+      userId,
+      endDate: {
+        lt: periodWindow.startDate, // Period that ends before this one starts
+      },
+    },
+    orderBy: { endDate: 'desc' },
+    take: 1,
+  });
+
+  // Opening cash = previous period's ending cash, or 0 if no previous period
+  let openingCash = new Decimal(0);
+  if (previousPeriod && previousPeriod.closingCashActual) {
+    openingCash = previousPeriod.closingCashActual;
+  } else if (previousPeriod && previousPeriod.closingCashExpected) {
+    openingCash = previousPeriod.closingCashExpected;
+  }
+
   return createPeriod({
     userId,
     label: formatPeriodLabel(periodWindow.startDate, periodWindow.endDate),
     payDate: periodWindow.payDate,
     startDate: periodWindow.startDate,
     endDate: periodWindow.endDate,
-    openingCash: 0,
+    openingCash,
     status: 'OPEN',
   });
 }
