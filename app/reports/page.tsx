@@ -52,7 +52,7 @@ export default function ReportsPage() {
 
   // Prepare trend data for Recharts
   const trendData = data.periodLabels.map((label, i) => ({
-    period: new Date(label).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    period: label,
     income: Number(data.trendIncome[i] ?? 0),
     spending: Number(data.trendSpending[i] ?? 0),
     savings: Number(data.trendSavings[i] ?? 0),

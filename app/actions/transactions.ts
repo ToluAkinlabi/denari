@@ -7,6 +7,7 @@
 
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { CategoryGroup, CategoryType } from '@prisma/client';
 import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
@@ -17,6 +18,7 @@ import {
   backlogImportSchema,
   validate,
   formatValidationErrors,
+  parseIsoDateString,
 } from '@/lib/validators/schemas';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
@@ -195,7 +197,7 @@ export async function addQuickEntry(
     }
 
     // Step 5: Get or create period for date
-    const entryDate = validationError.date || new Date();
+    const entryDate = parseIsoDateString(validationError.date) || new Date();
     const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
 
     // Step 6: Create ledger entry
@@ -219,6 +221,7 @@ export async function addQuickEntry(
       });
     }
 
+    revalidatePath('/');
     return {
       success: true,
       data: {
@@ -283,13 +286,13 @@ export async function addTransaction(
     }
 
     // Step 3: Resolve period for transaction date
-    const date = data.date;
+    const date = parseIsoDateString(data.date) || new Date();
     let resolvedPeriodId = data.periodId;
     const selectedPeriod = data.periodId
       ? await periodsRepo.getPeriodById(data.periodId)
       : null;
 
-    // If UI sends a period for "today" but user picks a historical date,
+    // If UI sends a period for "today"but user picks a historical date,
     // map to the correct period for that date.
     if (!selectedPeriod || date < selectedPeriod.startDate || date > selectedPeriod.endDate) {
       const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
@@ -302,7 +305,7 @@ export async function addTransaction(
 
     // Step 4: Create entry
     const entry = await ledgerRepo.createLedgerEntry({
-      date: data.date,
+      date: date,
       amount: new Decimal(data.amount),
       categoryId: data.categoryId,
       description: data.description,
@@ -321,6 +324,7 @@ export async function addTransaction(
       });
     }
 
+    revalidatePath('/');
     return {
       success: true,
       data: {
@@ -488,7 +492,7 @@ export async function addSummaryEntry(
     }
 
     // Step 3: Resolve period for date
-    const date = data.date;
+    const date = parseIsoDateString(data.date) || new Date();
     let resolvedPeriodId = data.periodId;
     const selectedPeriod = data.periodId
       ? await periodsRepo.getPeriodById(data.periodId)
@@ -537,7 +541,7 @@ export async function addSummaryEntry(
 
     // Step 5: No collision - create summary entry
     const entry = await ledgerRepo.createLedgerEntry({
-      date: data.date,
+      date: date,
       amount: new Decimal(data.amount),
       categoryId: data.categoryId,
       description: data.description,
@@ -556,6 +560,7 @@ export async function addSummaryEntry(
       });
     }
 
+    revalidatePath('/');
     return {
       success: true,
       data: {
@@ -604,6 +609,7 @@ export async function deleteTransaction(
     // Delete entry
     await ledgerRepo.deleteLedgerEntry(entryId);
 
+    revalidatePath('/');
     return {
       success: true,
     };
@@ -683,6 +689,7 @@ export async function updateTransaction(
       }
     }
 
+    revalidatePath('/');
     return {
       success: true,
       data: { id: updated.id },

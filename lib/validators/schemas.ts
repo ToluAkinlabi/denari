@@ -37,6 +37,28 @@ const positiveCurrencySchema = decimalSchema.refine(
 );
 
 /**
+ * ISO Date String
+ * Accepts dates as YYYY-MM-DD strings to preserve local timezone
+ */
+const isoDateString = z
+  .string()
+  .optional()
+  .refine(
+    (val) => !val || /^\d{4}-\d{2}-\d{2}$/.test(val),
+    'Date must be in YYYY-MM-DD format'
+  );
+
+/**
+ * Parse ISO date string to local Date object
+ * Prevents timezone conversion issues
+ */
+export function parseIsoDateString(dateStr?: string): Date | undefined {
+  if (!dateStr) return undefined;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Quick Entry Schema
  *
  * Validates natural language financial entry input.
@@ -51,7 +73,7 @@ export const quickEntrySchema = z.object({
       (val) => /^\d+/.test(val),
       'Entry must start with an amount'
     ),
-  date: z.date().optional(),
+  date: isoDateString,
   categoryOverride: z.string().optional(),
 });
 
@@ -70,12 +92,7 @@ export const transactionSchema = z.object({
     .min(1, 'Description required')
     .max(200, 'Description too long'),
   entryType: z.enum(['INCOME', 'EXPENSE', 'SAVINGS']),
-  date: z
-    .date()
-    .refine(
-      (d) => d <= new Date(),
-      'Cannot create transactions for future dates'
-    ),
+  date: isoDateString,
   periodId: idSchema.optional(),
   tags: z.array(z.string()).max(5, 'Too many tags').optional(),
   notes: z.string().max(500, 'Notes too long').optional(),
@@ -96,12 +113,7 @@ export const summaryEntrySchema = z.object({
     .string()
     .min(1, 'Description required')
     .max(200, 'Description too long'),
-  date: z
-    .date()
-    .refine(
-      (d) => d <= new Date(),
-      'Cannot create transactions for future dates'
-    ),
+  date: isoDateString,
   periodId: idSchema.optional(),
   notes: z.string().max(500, 'Notes too long').optional(),
 });
