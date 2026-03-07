@@ -719,7 +719,8 @@ export async function getTransactions(
       description: string;
       amount: string;
       type: string;
-      category: string;
+      categoryName?: string;
+      categoryId?: string;
     }>
   >
 > {
@@ -746,9 +747,10 @@ export async function getTransactions(
       id: e.id,
       date: e.date.toISOString(),
       description: e.description || '',
-      amount: e.amount.toString(),
+      amount: e.amount.toFixed(2),
       type: e.entryType,
-      category: categoryMap.get(e.categoryId)?.name || 'Unknown',
+      categoryName: categoryMap.get(e.categoryId)?.name,
+      categoryId: e.categoryId,
     }));
 
     return {

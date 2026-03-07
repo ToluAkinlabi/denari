@@ -77,6 +77,7 @@ export default function ReportsPage() {
 
         <Card className="p-4">
           <h3 className="font-semibold mb-4">{data.monthLabel}</h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Totals from all periods overlapping this month</p>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted">Income</span>

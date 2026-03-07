@@ -93,51 +93,51 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-200 bg-red-50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}`}>
+      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-300 bg-red-50 dark:bg-red-950/30' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30' : 'border-green-300 bg-green-50 dark:bg-green-950/30'}`}>
         <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">Day {data.paceMetrics.day} of {data.paceMetrics.totalDays}</span>
-            <span className={`text-xs font-bold px-2 py-1 rounded ${
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Day {data.paceMetrics.day} of {data.paceMetrics.totalDays}</span>
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
               data.paceMetrics.status === 'RED'
-                ? 'bg-red-200 text-red-800'
+                ? 'bg-red-600 text-white'
                 : data.paceMetrics.status === 'YELLOW'
-                ? 'bg-yellow-200 text-yellow-800'
-                : 'bg-green-200 text-green-800'
+                ? 'bg-yellow-600 text-white'
+                : 'bg-green-600 text-white'
             }`}>
               {data.paceMetrics.status === 'RED' ? 'Overspending' : data.paceMetrics.status === 'YELLOW' ? 'On Pace' : 'Under Budget'}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="text-center">
-              <p className="text-muted">Daily Budget</p>
-              <p className="font-semibold text-sm">${data.paceMetrics.dailyBudget}</p>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Daily Budget</p>
+              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.dailyBudget}</p>
             </div>
-            <div className="text-center border-l border-r border-gray-300 dark:border-gray-600">
-              <p className="text-muted">Expected</p>
-              <p className="font-semibold text-sm">${data.paceMetrics.expectedSpend}</p>
+            <div className="text-center border-l border-r border-gray-400 dark:border-gray-500">
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Expected</p>
+              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.expectedSpend}</p>
             </div>
             <div className="text-center">
-              <p className="text-muted">Actual</p>
-              <p className="font-semibold text-sm">${data.paceMetrics.actualSpend}</p>
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Actual</p>
+              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.actualSpend}</p>
             </div>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div className={`h-2 rounded-full ${
+          <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2.5">
+            <div className={`h-2.5 rounded-full ${
               data.paceMetrics.status === 'RED'
-                ? 'bg-red-500'
+                ? 'bg-red-600'
                 : data.paceMetrics.status === 'YELLOW'
-                ? 'bg-yellow-500'
-                : 'bg-green-500'
+                ? 'bg-yellow-600'
+                : 'bg-green-600'
             }`} style={{ width: `${Math.min(100, (parseFloat(data.paceMetrics.actualSpend) / parseFloat(data.paceMetrics.expectedSpend)) * 100)}%` }}></div>
           </div>
         </div>
       </Card>
 
       <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-4">Spending by Category</h3>
+        <h3 className="text-sm font-semibold mb-4">Spending by Category (All Time)</h3>
         <div className="space-y-2">
-          {data.categoryBreakdown.slice(0, 5).map((item) => (
+          {data.categoryBreakdown.map((item) => (
             <div
               key={item.name}
               className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-800 last:border-0"

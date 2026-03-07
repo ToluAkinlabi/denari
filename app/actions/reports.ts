@@ -52,7 +52,10 @@ export async function getMonthlyReport(
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    const periods = await periodsRepo.getPeriodsInRange(resolvedUserId, monthStart, monthEnd);
+    // Fetch periods that overlap with the month, then sort chronologically for chart display
+    const periodsRaw = await periodsRepo.getPeriodsInRange(resolvedUserId, monthStart, monthEnd);
+    const periods = periodsRaw.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    
     const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     const categoryMap = new Map<
       string,

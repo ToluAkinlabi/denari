@@ -8,6 +8,7 @@
 'use server';
 
 import { Decimal } from '@prisma/client/runtime/library';
+import { differenceInCalendarDays, startOfDay } from 'date-fns';
 import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
@@ -209,15 +210,12 @@ export async function getDashboardData(
     const spendingControlled = spendingPercent.lessThanOrEqualTo(70);
 
     // Pace metrics calculation
-    const periodStart = currentPeriod.startDate;
-    const periodEnd = currentPeriod.endDate;
-    const today = new Date();
-    const daysElapsed = Math.ceil(
-      (today.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const totalPeriodDays = Math.ceil(
-      (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const periodStart = startOfDay(currentPeriod.startDate);
+    const periodEnd = startOfDay(currentPeriod.endDate);
+    const today = startOfDay(new Date());
+    const totalPeriodDays = differenceInCalendarDays(periodEnd, periodStart) + 1;
+    const rawDaysElapsed = differenceInCalendarDays(today, periodStart) + 1;
+    const daysElapsed = Math.max(0, Math.min(rawDaysElapsed, totalPeriodDays));
     const dailyBudget = currentIncome.equals(0)
       ? new Decimal(0)
       : currentIncome.dividedBy(totalPeriodDays);
@@ -237,15 +235,23 @@ export async function getDashboardData(
     const paceMetrics = {
       day: Math.min(daysElapsed, totalPeriodDays),
       totalDays: totalPeriodDays,
-      dailyBudget: dailyBudget.toString(),
-      expectedSpend: expectedSpend.toString(),
-      actualSpend: currentSpending.toString(),
+      dailyBudget: dailyBudget.toFixed(2),
+      expectedSpend: expectedSpend.toFixed(2),
+      actualSpend: currentSpending.toFixed(2),
       status: paceStatus,
     };
 
-    // Category breakdown
+    // Category breakdown - lifetime totals across all periods
+    const allPeriodsForUser = await periodsRepo.getRecentPeriods(resolvedUserId, 100); // Get up to 100 periods
+    const allEntriesForUser: (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[] = [];
+    
+    for (const period of allPeriodsForUser) {
+      const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+      allEntriesForUser.push(...entries);
+    }
+    
     const categoryBreakdown = calculateSpendingByCategory(
-      currentEntries,
+      allEntriesForUser,
       categoryMap
     );
     const categoryData = categoryBreakdown.map((item) => {
@@ -254,7 +260,7 @@ export async function getDashboardData(
       return {
         name: item.categoryName || cat?.name || 'Unknown',
         emoji: undefined,
-        amount: item.amount.toString(),
+        amount: item.amount.toFixed(2),
         percentage: item.percentage.toFixed(1) + '%',
         trend: 'stable' as const,
       };
@@ -278,7 +284,7 @@ export async function getDashboardData(
 
       return {
         name: bucket,
-        amount: amount.toString(),
+        amount: amount.toFixed(2),
         percentage: percentage.toFixed(1) + '%',
       };
     });
@@ -356,11 +362,11 @@ export async function getDashboardData(
 
       forecast = {
         confidence: forecastResult.confidence,
-        nextIncome: forecastResult.income.toString(),
-        nextSpending: forecastResult.spending.toString(),
-        nextSavings: forecastResult.savings.toString(),
-        nextWealth: forecastResult.wealthCreated.toString(),
-        nextEndingCash: forecastResult.endingCash.toString(),
+        nextIncome: forecastResult.income.toFixed(2),
+        nextSpending: forecastResult.spending.toFixed(2),
+        nextSavings: forecastResult.savings.toFixed(2),
+        nextWealth: forecastResult.wealthCreated.toFixed(2),
+        nextEndingCash: forecastResult.endingCash.toFixed(2),
         warnings: getForecastWarnings(forecastResult),
       };
     }
@@ -402,15 +408,15 @@ export async function getDashboardData(
       comparison = {
         type: compareTo,
         income: {
-          current: currentIncome.toString(),
+          current: currentIncome.toFixed(2),
           compared: baseIncome.toFixed(2),
-          change: incomeChange.toString(),
+          change: incomeChange.toFixed(2),
           changePercent: incomeChangePercent.toFixed(1) + '%',
         },
         wealth: {
-          current: currentWealth.toString(),
+          current: currentWealth.toFixed(2),
           compared: baseWealth.toFixed(2),
-          change: wealthChange.toString(),
+          change: wealthChange.toFixed(2),
           changePercent: wealthChangePercent.toFixed(1) + '%',
         },
       };
@@ -426,16 +432,16 @@ export async function getDashboardData(
       },
       paceMetrics,
       cashMetrics: {
-        opening: currentPeriod.openingCash.toString(),
-        income: currentIncome.toString(),
-        spending: currentSpending.toString(),
-        savings: currentSavings.toString(),
-        ending: currentCashEnding.toString(),
+        opening: currentPeriod.openingCash.toFixed(2),
+        income: currentIncome.toFixed(2),
+        spending: currentSpending.toFixed(2),
+        savings: currentSavings.toFixed(2),
+        ending: currentCashEnding.toFixed(2),
         isBalanced,
-        balanceError: balanceError.toString(),
+        balanceError: balanceError.toFixed(2),
       },
       wealthMetrics: {
-        created: currentWealth.toString(),
+        created: currentWealth.toFixed(2),
         isNegative: currentWealth.isNegative(),
         savingsRate: savingsRate.toFixed(1) + '%',
         isSavingsHealthy: savingsHealthy,
@@ -444,7 +450,7 @@ export async function getDashboardData(
       },
       categoryBreakdown: categoryData,
       savingsRecap: {
-        totalSavings: currentSavings.toString(),
+        totalSavings: currentSavings.toFixed(2),
         buckets: savingsData,
       },
       scorecard: {

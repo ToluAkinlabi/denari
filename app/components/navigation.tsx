@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
-  BarChart3,
+  List,
   PlusCircle,
   Settings,
   TrendingUp,
@@ -17,7 +17,7 @@ export function Navigation() {
 
   const navItems = [
     { href: '/', icon: Home, label: 'Dashboard', mobile: true },
-    { href: '/periods', icon: BarChart3, label: 'Periods', mobile: true },
+    { href: '/transactions', icon: List, label: 'Transactions', mobile: true },
     { href: '/add', icon: PlusCircle, label: 'Add', mobile: true },
     { href: '/reports', icon: TrendingUp, label: 'Reports', mobile: true },
     { href: '/settings', icon: Settings, label: 'Settings', mobile: true },
