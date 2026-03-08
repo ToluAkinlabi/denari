@@ -162,9 +162,18 @@ export async function getDashboardData(
     }
 
     // Fetch all data
-    const currentEntries = await ledgerRepo.getLedgerEntriesForPeriod(
+    const allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(
       currentPeriod.id
     );
+    const periodStart = startOfDay(currentPeriod.startDate);
+    const periodEnd = startOfDay(currentPeriod.endDate);
+
+    // Guard rail: only include entries whose date falls inside this period window.
+    // This prevents any mis-assigned records from affecting current period totals.
+    const currentEntries = allCurrentPeriodEntries.filter((entry) => {
+      const entryDay = startOfDay(entry.date);
+      return entryDay >= periodStart && entryDay <= periodEnd;
+    });
     const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     const categoryMap = new Map<
       string,
@@ -210,8 +219,6 @@ export async function getDashboardData(
     const spendingControlled = spendingPercent.lessThanOrEqualTo(70);
 
     // Pace metrics calculation
-    const periodStart = startOfDay(currentPeriod.startDate);
-    const periodEnd = startOfDay(currentPeriod.endDate);
     const today = startOfDay(new Date());
     const totalPeriodDays = differenceInCalendarDays(periodEnd, periodStart) + 1;
     const rawDaysElapsed = differenceInCalendarDays(today, periodStart) + 1;
