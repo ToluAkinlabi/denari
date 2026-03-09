@@ -28,7 +28,7 @@ const STRATEGIES: ForecastStrategy[] = [
   'ONE_TIME',
 ];
 
-const FREQUENCIES = ['BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'VARIABLE'];
+const FREQUENCIES = ['BIWEEKLY', 'MONTHLY', 'BIMONTHLY', 'QUARTERLY', 'ANNUAL', 'VARIABLE'];
 
 function strategyLabel(strategy: ForecastStrategy) {
   return strategy.replace(/_/g, ' ');

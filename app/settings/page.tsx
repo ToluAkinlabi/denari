@@ -1,7 +1,8 @@
 import { Card } from '@/components/card';
-import { Bell, Moon, Lock, Database, HelpCircle, LogOut } from 'lucide-react';
+import { Bell, Moon, HelpCircle, LogOut } from 'lucide-react';
 import { getCategoryForecastSettings } from '@/app/actions/settings';
 import { SettingsForecastControls } from '@/app/components/settings-forecast-controls';
+import { SettingsDataActions } from '@/app/components/settings-data-actions';
 
 export default async function SettingsPage() {
   const settingsResult = await getCategoryForecastSettings();
@@ -45,42 +46,7 @@ export default async function SettingsPage() {
           </Card>
         </div>
 
-        {/* Data */}
-        <div>
-          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Data</h3>
-          <Card className="p-4">
-            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <Database size={20} className="text-gray-600 dark:text-gray-400" />
-                <div className="text-left">
-                  <span className="block">Export Data</span>
-                  <span className="text-xs text-muted">Export as CSV</span>
-                </div>
-              </div>
-              <span className="text-xl">→</span>
-            </button>
-            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <Database size={20} className="text-gray-600 dark:text-gray-400" />
-                <div className="text-left">
-                  <span className="block">Backup</span>
-                  <span className="text-xs text-muted">Create a backup</span>
-                </div>
-              </div>
-              <span className="text-xl">→</span>
-            </button>
-            <button className="w-full flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <Lock size={20} className="text-orange-600" />
-                <div className="text-left">
-                  <span className="block text-orange-600">Reset All Data</span>
-                  <span className="text-xs text-muted">Irreversible</span>
-                </div>
-              </div>
-              <span className="text-xl">→</span>
-            </button>
-          </Card>
-        </div>
+        <SettingsDataActions />
 
         <SettingsForecastControls initialSettings={forecastSettings} />
 

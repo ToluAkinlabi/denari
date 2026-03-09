@@ -99,8 +99,8 @@ function inferStrategyFromHistory(
   }
 
   if (
-    ['QUARTERLY', 'ANNUAL'].includes(freq.pattern) ||
-    ['QUARTERLY', 'ANNUAL'].includes(expected)
+    ['BIMONTHLY', 'QUARTERLY', 'ANNUAL'].includes(freq.pattern) ||
+    ['BIMONTHLY', 'QUARTERLY', 'ANNUAL'].includes(expected)
   ) {
     return 'KNOWN_IRREGULAR';
   }

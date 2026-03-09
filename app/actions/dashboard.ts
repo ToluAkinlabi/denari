@@ -384,19 +384,22 @@ export async function getDashboardData(
       try {
         // Build category histories from recent period entries
         const allRecentEntries = Array.from(entriesByPeriod.values()).flat();
+        const entriesWithCategory = allRecentEntries
+          .filter((entry) => entry.category !== null)
+          .map((entry) => ({ ...entry, category: entry.category! }));
         
         const incomeCategories = buildCategoryHistory(
-          allRecentEntries.filter(e => e.category !== null) as any,
+          entriesWithCategory,
           'INCOME'
         );
         
         const spendingCategories = buildCategoryHistory(
-          allRecentEntries.filter(e => e.category !== null) as any,
+          entriesWithCategory,
           'EXPENSE'
         );
         
         const savingsCategories = buildSavingsHistory(
-          allRecentEntries.filter(e => e.category !== null) as any
+          entriesWithCategory
         );
 
         // Use enhanced forecast with category-level intelligence

@@ -9,7 +9,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
-import type { CategoryGroup, CategoryType } from '@prisma/client';
+import type { CategoryGroup, CategoryType, ForecastStrategy } from '@prisma/client';
+import { detectFrequency } from '@/lib/finance/frequency-detection';
 import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
 import {
   transactionSchema,
@@ -42,6 +43,118 @@ async function resolveUserId(userId?: string) {
   if (userId) return userId;
   const user = await usersRepo.getOrCreateDefaultUser();
   return user.id;
+}
+
+function estimateNextOccurrence(date: Date, expectedFrequency: string): Date | undefined {
+  const freq = expectedFrequency.toUpperCase();
+  const next = new Date(date);
+
+  if (freq === 'BIWEEKLY') next.setDate(next.getDate() + 14);
+  else if (freq === 'MONTHLY') next.setMonth(next.getMonth() + 1);
+  else if (freq === 'BIMONTHLY') next.setMonth(next.getMonth() + 2);
+  else if (freq === 'QUARTERLY') next.setMonth(next.getMonth() + 3);
+  else if (freq === 'ANNUAL') next.setFullYear(next.getFullYear() + 1);
+  else return undefined;
+
+  return next;
+}
+
+function inferTags(description: string | undefined): string[] {
+  const text = (description || '').toLowerCase();
+  const tags: string[] = [];
+
+  if (text.includes('bonus')) tags.push('bonus');
+  if (text.includes('refund')) tags.push('refund');
+  if (text.includes('gift')) tags.push('gift');
+  if (text.includes('one-time') || text.includes('onetime')) tags.push('one-time');
+  if (text.includes('annual')) tags.push('annual');
+  if (text.includes('quarterly')) tags.push('quarterly');
+  if (text.includes('bimonthly') || text.includes('bi-monthly')) tags.push('bimonthly');
+
+  return tags;
+}
+
+async function inferEntryForecastMetadata(input: {
+  userId: string;
+  categoryId: string;
+  entryType: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT';
+  date: Date;
+  description?: string;
+  categoryDefaultStrategy?: ForecastStrategy;
+  categoryExpectedFrequency?: string;
+}): Promise<{
+  forecastStrategy: ForecastStrategy;
+  nextOccurrence?: Date;
+  tags: string[];
+  isProvisional: boolean;
+}> {
+  const {
+    userId,
+    categoryId,
+    entryType,
+    date,
+    description,
+    categoryDefaultStrategy,
+    categoryExpectedFrequency,
+  } = input;
+
+  const tags = inferTags(description);
+
+  if (tags.includes('one-time') || tags.includes('bonus') || tags.includes('gift')) {
+    return {
+      forecastStrategy: 'ONE_TIME',
+      tags,
+      isProvisional: false,
+    };
+  }
+
+  if (categoryDefaultStrategy && categoryDefaultStrategy !== 'UNKNOWN') {
+    return {
+      forecastStrategy: categoryDefaultStrategy,
+      nextOccurrence: estimateNextOccurrence(date, categoryExpectedFrequency || 'VARIABLE'),
+      tags,
+      isProvisional: false,
+    };
+  }
+
+  const recent = await ledgerRepo.getRecentLedgerEntriesForCategory(userId, categoryId, 12);
+  const sameType = recent.filter((entry) => entry.entryType === entryType);
+  const dates = [...sameType.map((entry) => entry.date), date];
+
+  // Self-learning: once category appears 2+ times, include and infer strategy.
+  if (dates.length >= 2) {
+    const frequency = detectFrequency(dates);
+
+    if (['BIWEEKLY', 'MONTHLY'].includes(frequency.pattern)) {
+      return {
+        forecastStrategy: 'KNOWN_RECURRING',
+        nextOccurrence: frequency.estimatedNextDate,
+        tags,
+        isProvisional: false,
+      };
+    }
+
+    if (['BIMONTHLY', 'QUARTERLY', 'ANNUAL'].includes(frequency.pattern)) {
+      return {
+        forecastStrategy: 'KNOWN_IRREGULAR',
+        nextOccurrence: frequency.estimatedNextDate,
+        tags,
+        isProvisional: false,
+      };
+    }
+
+    return {
+      forecastStrategy: 'KNOWN_VARIABLE',
+      tags,
+      isProvisional: false,
+    };
+  }
+
+  return {
+    forecastStrategy: 'UNKNOWN',
+    tags,
+    isProvisional: true,
+  };
 }
 
 /**
@@ -204,6 +317,16 @@ export async function addQuickEntry(
     const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
 
     // Step 6: Create ledger entry
+    const metadata = await inferEntryForecastMetadata({
+      userId,
+      categoryId: category.id,
+      entryType: toLedgerEntryType(parsed.entryType),
+      date: entryDate,
+      description: parsed.description,
+      categoryDefaultStrategy: category.defaultStrategy,
+      categoryExpectedFrequency: category.expectedFrequency,
+    });
+
     const entry = await ledgerRepo.createLedgerEntry({
       date: entryDate,
       amount: parsed.amount,
@@ -212,6 +335,10 @@ export async function addQuickEntry(
       entryType: toLedgerEntryType(parsed.entryType),
       periodId: period.id,
       userId,
+      tags: metadata.tags,
+      forecastStrategy: metadata.forecastStrategy,
+      nextOccurrence: metadata.nextOccurrence,
+      isProvisional: metadata.isProvisional,
     });
 
     // Step 7: Handle savings allocations
@@ -307,14 +434,29 @@ export async function addTransaction(
       (await periodsRepo.ensurePeriodForDateAndUser(userId, date)).id;
 
     // Step 4: Create entry
+    const entryType = toLedgerEntryType(data.entryType);
+    const metadata = await inferEntryForecastMetadata({
+      userId,
+      categoryId: data.categoryId,
+      entryType,
+      date,
+      description: data.description,
+      categoryDefaultStrategy: category.defaultStrategy,
+      categoryExpectedFrequency: category.expectedFrequency,
+    });
+
     const entry = await ledgerRepo.createLedgerEntry({
       date: date,
       amount: new Decimal(data.amount),
       categoryId: data.categoryId,
       description: data.description,
-      entryType: toLedgerEntryType(data.entryType),
+      entryType,
       periodId: finalPeriodId,
       userId,
+      tags: metadata.tags,
+      forecastStrategy: metadata.forecastStrategy,
+      nextOccurrence: metadata.nextOccurrence,
+      isProvisional: metadata.isProvisional,
     });
 
     // Step 5: Handle savings allocations
@@ -363,7 +505,13 @@ export async function importBacklogEntries(
 
     const categories = await categoriesRepo.getCategoriesForUser(userId);
     const categoryByName = new Map(
-      categories.map((c: { id: string; name: string; type: string }) => [
+      categories.map((c: {
+        id: string;
+        name: string;
+        type: string;
+        defaultStrategy: ForecastStrategy;
+        expectedFrequency: string;
+      }) => [
         c.name.toLowerCase(),
         c,
       ])
@@ -391,14 +539,29 @@ export async function importBacklogEntries(
         const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
         const type = row.entryType || (category.type === 'INCOME' ? 'INCOME' : category.type === 'SAVINGS' ? 'SAVINGS' : 'EXPENSE');
 
+        const entryType = toLedgerEntryType(type);
+        const metadata = await inferEntryForecastMetadata({
+          userId,
+          categoryId: category.id,
+          entryType,
+          date: entryDate,
+          description: row.description || category.name,
+          categoryDefaultStrategy: category.defaultStrategy,
+          categoryExpectedFrequency: category.expectedFrequency,
+        });
+
         const entry = await ledgerRepo.createLedgerEntry({
           date: entryDate,
           amount: new Decimal(row.amount),
           categoryId: category.id,
           description: row.description || category.name,
-          entryType: toLedgerEntryType(type),
+          entryType,
           periodId: period.id,
           userId,
+          tags: metadata.tags,
+          forecastStrategy: metadata.forecastStrategy,
+          nextOccurrence: metadata.nextOccurrence,
+          isProvisional: metadata.isProvisional,
         });
 
         if (type === 'SAVINGS') {
@@ -552,6 +715,16 @@ export async function addSummaryEntry(
     }
 
     // Step 5: No collision - create summary entry
+    const metadata = await inferEntryForecastMetadata({
+      userId,
+      categoryId: data.categoryId,
+      entryType: 'SUMMARY_ENTRY',
+      date,
+      description: data.description,
+      categoryDefaultStrategy: category.defaultStrategy,
+      categoryExpectedFrequency: category.expectedFrequency,
+    });
+
     const entry = await ledgerRepo.createLedgerEntry({
       date: date,
       amount: new Decimal(data.amount),
@@ -560,6 +733,10 @@ export async function addSummaryEntry(
       entryType: 'SUMMARY_ENTRY',
       periodId: finalPeriodId,
       userId,
+      tags: metadata.tags,
+      forecastStrategy: metadata.forecastStrategy,
+      nextOccurrence: metadata.nextOccurrence,
+      isProvisional: metadata.isProvisional,
     });
 
     // Step 6: Attach notes if provided
@@ -791,6 +968,54 @@ export async function getTransactions(
     };
   } catch (error) {
     console.error('getTransactions error:', error);
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
+ * Get transactions for a user date range (inclusive)
+ */
+export async function getTransactionsForDateRange(
+  startDate: Date,
+  endDate: Date
+): Promise<
+  ApiResponse<{
+    transactions: Array<{
+      id: string;
+      date: string;
+      description: string;
+      amount: string;
+      type: string;
+      categoryName?: string;
+      categoryId?: string;
+    }>;
+  }>
+> {
+  try {
+    const userId = await resolveUserId();
+    const entries = await ledgerRepo.getLedgerEntriesForUserDateRange(userId, startDate, endDate);
+
+    const formatted = entries.map((e) => ({
+      id: e.id,
+      date: e.date.toISOString(),
+      description: e.description || '',
+      amount: e.amount.toFixed(2),
+      type: e.entryType,
+      categoryName: e.category?.name,
+      categoryId: e.categoryId,
+    }));
+
+    return {
+      success: true,
+      data: {
+        transactions: formatted,
+      },
+    };
+  } catch (error) {
+    console.error('getTransactionsForDateRange error:', error);
     return {
       success: false,
       error: `Server error: ${(error as Error).message}`,

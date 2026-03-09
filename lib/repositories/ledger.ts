@@ -95,6 +95,44 @@ export async function getRecentLedgerEntries(
 }
 
 /**
+ * Get recent ledger entries for a user/category pair
+ */
+export async function getRecentLedgerEntriesForCategory(
+  userId: string,
+  categoryId: string,
+  limit: number = 12
+) {
+  return prisma.ledgerEntry.findMany({
+    where: { userId, categoryId },
+    orderBy: { date: 'desc' },
+    take: limit,
+  });
+}
+
+/**
+ * Get user ledger entries between two dates (inclusive)
+ */
+export async function getLedgerEntriesForUserDateRange(
+  userId: string,
+  startDate: Date,
+  endDate: Date
+) {
+  return prisma.ledgerEntry.findMany({
+    where: {
+      userId,
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    include: {
+      category: true,
+    },
+    orderBy: { date: 'asc' },
+  });
+}
+
+/**
  * Create ledger entry (transaction)
  */
 export async function createLedgerEntry(

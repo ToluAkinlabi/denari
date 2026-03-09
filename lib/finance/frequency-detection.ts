@@ -10,6 +10,7 @@ import { differenceInDays } from 'date-fns';
 export type FrequencyPattern = 
   | 'BIWEEKLY'      // Every 14 days (paycheck)
   | 'MONTHLY'       // ~30 days (rent, subscriptions)  
+  | 'BIMONTHLY'     // ~60 days (every two months)
   | 'QUARTERLY'     // ~90 days (insurance)
   | 'ANNUAL'        // ~365 days
   | 'VARIABLE'      // No clear pattern
@@ -98,6 +99,8 @@ export function detectFrequency(dates: Date[]): FrequencyAnalysis {
     pattern = 'BIWEEKLY';
   } else if (isNearValue(avgGap, 30, 3) || isNearValue(avgGap, 31, 3)) {
     pattern = 'MONTHLY';
+  } else if (isNearValue(avgGap, 60, 5) || isNearValue(avgGap, 61, 5)) {
+    pattern = 'BIMONTHLY';
   } else if (isNearValue(avgGap, 90, 7)) {
     pattern = 'QUARTERLY';
   } else if (isNearValue(avgGap, 365, 14)) {
@@ -146,8 +149,8 @@ function calculateVariance(values: number[]): number {
 }
 
 /**
- * Detect if an amount is an outlier in a series
- * Using IQR (Interquartile Range) method
+ * Detect if an amount is an outlier in a series.
+ * Rule: Anything > 2.5x average gets flagged.
  * 
  * @example
  *   isOutlier(new Decimal(5000), [
@@ -156,28 +159,20 @@ function calculateVariance(values: number[]): number {
  *   // Returns: true (5000 is way higher than normal)
  */
 export function isOutlier(value: Decimal, historicalValues: Decimal[]): boolean {
-  if (historicalValues.length < 3) {
+  if (historicalValues.length < 2) {
     // Not enough history to determine outliers
     return false;
   }
 
-  const sorted = [...historicalValues]
-    .map(d => d.toNumber())
-    .sort((a, b) => a - b);
+  const average = historicalValues
+    .reduce((sum, item) => sum.plus(item), new Decimal(0))
+    .dividedBy(historicalValues.length);
 
-  const q1Index = Math.floor(sorted.length / 4);
-  const q3Index = Math.floor(sorted.length * 0.75);
-  
-  const q1 = sorted[q1Index];
-  const q3 = sorted[q3Index];
-  const iqr = q3 - q1;
+  if (average.lte(0)) {
+    return false;
+  }
 
-  const lowerBound = q1 - (1.5 * iqr);
-  const upperBound = q3 + (1.5 * iqr);
-
-  const numValue = value.toNumber();
-
-  return numValue < lowerBound || numValue > upperBound;
+  return value.greaterThan(average.times(2.5));
 }
 
 /**
