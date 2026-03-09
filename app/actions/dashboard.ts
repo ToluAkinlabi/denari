@@ -39,6 +39,8 @@ import {
   gradeScore,
 } from '@/lib/finance/scorecard';
 import { forecastNextPeriod, getForecastWarnings } from '@/lib/finance/forecast';
+import { forecastNextPeriodEnhanced, type CategoryForecast } from '@/lib/finance/forecast-enhanced';
+import { buildCategoryHistory, buildSavingsHistory } from '@/lib/finance/forecast-builder';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -106,12 +108,20 @@ export interface DashboardData {
   };
   forecast: {
     confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+    // Ranges for enhanced forecast
+    income: { min: string; likely: string; max: string };
+    spending: { min: string; likely: string; max: string };
+    savings: { min: string; likely: string; max: string };
+    discretionaryBuffer: { min: string; likely: string; max: string };
+    endingCash: { min: string; likely: string; max: string };
+    // Backward compatibility (using likely value)
     nextIncome: string;
     nextSpending: string;
     nextSavings: string;
     nextWealth: string;
     nextEndingCash: string;
     warnings: string[];
+    categoryBreakdown?: CategoryForecast[];
   };
   comparison?: {
     type: 'PREVIOUS' | 'AVERAGE';
@@ -150,7 +160,7 @@ export async function getDashboardData(
     const includeProjection = options?.includeProjection ?? true;
 
     // Fetch current period or provided period
-    const currentPeriod = options?.periodId
+    let currentPeriod = options?.periodId
       ? await periodsRepo.getPeriodById(options.periodId)
       : await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
 
@@ -162,14 +172,24 @@ export async function getDashboardData(
     }
 
     // Fetch all data
-    const allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(
+    let allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(
       currentPeriod.id
     );
+
+    // If current period is empty, fall back to the most recent period with data.
+    // This keeps dashboard/transactions useful right after backlog imports.
+    if (!options?.periodId && allCurrentPeriodEntries.length === 0) {
+      const mostRecentWithData = await periodsRepo.getMostRecentPeriodWithEntries(resolvedUserId);
+      if (mostRecentWithData) {
+        currentPeriod = mostRecentWithData;
+        allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id);
+      }
+    }
     const periodStart = startOfDay(currentPeriod.startDate);
     const periodEnd = startOfDay(currentPeriod.endDate);
 
     // Guard rail: only include entries whose date falls inside this period window.
-    // This prevents any mis-assigned records from affecting current period totals.
+    // Period boundaries: INCLUSIVE on both start and end dates
     const currentEntries = allCurrentPeriodEntries.filter((entry) => {
       const entryDay = startOfDay(entry.date);
       return entryDay >= periodStart && entryDay <= periodEnd;
@@ -347,6 +367,11 @@ export async function getDashboardData(
     // Forecast
     let forecast: DashboardData['forecast'] = {
       confidence: 'MEDIUM',
+      income: { min: '0', likely: '0', max: '0' },
+      spending: { min: '0', likely: '0', max: '0' },
+      savings: { min: '0', likely: '0', max: '0' },
+      discretionaryBuffer: { min: '0', likely: '0', max: '0' },
+      endingCash: { min: '0', likely: '0', max: '0' },
       nextIncome: '0',
       nextSpending: '0',
       nextSavings: '0',
@@ -355,27 +380,113 @@ export async function getDashboardData(
       warnings: [],
     };
 
-    if (includeProjection && recentData.length >= 2) {
-      const recentIncome = recentData.map((d) => d.income);
-      const recentSpending = recentData.map((d) => d.spending);
-      const recentSavings = recentData.map((d) => d.savings);
+    if (includeProjection && recentPeriods.length >= 2) {
+      try {
+        // Build category histories from recent period entries
+        const allRecentEntries = Array.from(entriesByPeriod.values()).flat();
+        
+        const incomeCategories = buildCategoryHistory(
+          allRecentEntries.filter(e => e.category !== null) as any,
+          'INCOME'
+        );
+        
+        const spendingCategories = buildCategoryHistory(
+          allRecentEntries.filter(e => e.category !== null) as any,
+          'EXPENSE'
+        );
+        
+        const savingsCategories = buildSavingsHistory(
+          allRecentEntries.filter(e => e.category !== null) as any
+        );
 
-      const forecastResult = forecastNextPeriod({
-        currentCash: currentCashEnding,
-        recentIncome,
-        recentSpending,
-        recentSavings,
-      });
+        // Use enhanced forecast with category-level intelligence
+        const enhancedResult = forecastNextPeriodEnhanced({
+          currentCash: currentCashEnding,
+          incomeCategories,
+          spendingCategories,
+          savingsCategories,
+          periodIncome: currentIncome, // Use current income for context
+        });
 
-      forecast = {
-        confidence: forecastResult.confidence,
-        nextIncome: forecastResult.income.toFixed(2),
-        nextSpending: forecastResult.spending.toFixed(2),
-        nextSavings: forecastResult.savings.toFixed(2),
-        nextWealth: forecastResult.wealthCreated.toFixed(2),
-        nextEndingCash: forecastResult.endingCash.toFixed(2),
-        warnings: getForecastWarnings(forecastResult),
-      };
+        forecast = {
+          confidence: enhancedResult.confidence,
+          income: {
+            min: enhancedResult.income.min.toFixed(2),
+            likely: enhancedResult.income.likely.toFixed(2),
+            max: enhancedResult.income.max.toFixed(2),
+          },
+          spending: {
+            min: enhancedResult.spending.min.toFixed(2),
+            likely: enhancedResult.spending.likely.toFixed(2),
+            max: enhancedResult.spending.max.toFixed(2),
+          },
+          savings: {
+            min: enhancedResult.savings.min.toFixed(2),
+            likely: enhancedResult.savings.likely.toFixed(2),
+            max: enhancedResult.savings.max.toFixed(2),
+          },
+          discretionaryBuffer: {
+            min: enhancedResult.discretionaryBuffer.min.toFixed(2),
+            likely: enhancedResult.discretionaryBuffer.likely.toFixed(2),
+            max: enhancedResult.discretionaryBuffer.max.toFixed(2),
+          },
+          endingCash: {
+            min: enhancedResult.endingCash.min.toFixed(2),
+            likely: enhancedResult.endingCash.likely.toFixed(2),
+            max: enhancedResult.endingCash.max.toFixed(2),
+          },
+          // Backward compatibility - use likely values
+          nextIncome: enhancedResult.income.likely.toFixed(2),
+          nextSpending: enhancedResult.spending.likely.toFixed(2),
+          nextSavings: enhancedResult.savings.likely.toFixed(2),
+          nextWealth: enhancedResult.wealthCreated.likely.toFixed(2),
+          nextEndingCash: enhancedResult.endingCash.likely.toFixed(2),
+          warnings: enhancedResult.warnings,
+          categoryBreakdown: enhancedResult.categoryBreakdown,
+        };
+      } catch (error) {
+        // Fallback to simple forecast if enhanced fails
+        console.error('Enhanced forecast failed, using simple forecast:', error);
+        
+        const recentIncome = recentData.map((d) => d.income);
+        const recentSpending = recentData.map((d) => d.spending);
+        const recentSavings = recentData.map((d) => d.savings);
+
+        const forecastResult = forecastNextPeriod({
+          currentCash: currentCashEnding,
+          recentIncome,
+          recentSpending,
+          recentSavings,
+        });
+
+        const likely = forecastResult.income.toFixed(2);
+        forecast = {
+          confidence: forecastResult.confidence,
+          income: { min: likely, likely, max: likely },
+          spending: { 
+            min: forecastResult.spending.toFixed(2), 
+            likely: forecastResult.spending.toFixed(2), 
+            max: forecastResult.spending.toFixed(2) 
+          },
+          savings: {
+            min: forecastResult.savings.toFixed(2),
+            likely: forecastResult.savings.toFixed(2),
+            max: forecastResult.savings.toFixed(2)
+          },
+          discretionaryBuffer: { min: '0', likely: '0', max: '0' },
+          endingCash: {
+            min: forecastResult.endingCash.toFixed(2),
+            likely: forecastResult.endingCash.toFixed(2),
+            max: forecastResult.endingCash.toFixed(2)
+          },
+          nextIncome: forecastResult.income.toFixed(2),
+          nextSpending: forecastResult.spending.toFixed(2),
+          nextSavings: forecastResult.savings.toFixed(2),
+          nextWealth: forecastResult.wealthCreated.toFixed(2),
+          nextEndingCash: forecastResult.endingCash.toFixed(2),
+          warnings: getForecastWarnings(forecastResult),
+        };
+      }
     }
 
     // Comparison

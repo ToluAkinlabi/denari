@@ -14,6 +14,26 @@ export function DashboardContent({ data }: DashboardContentProps) {
   const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
   const periodEnd = new Date(data.currentPeriod.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
   const periodRange = `${periodStart} - ${periodEnd}`;
+  const carryForward = Number(data.cashMetrics.opening);
+  const carryForwardSign = carryForward > 0 ? '+' : '';
+  const carryForwardClass =
+    carryForward < 0 ? 'text-red-600' : carryForward > 0 ? 'text-emerald-600' : 'text-gray-700 dark:text-gray-200';
+  const paceActual = Number(data.paceMetrics.actualSpend);
+  const paceExpected = Number(data.paceMetrics.expectedSpend);
+  const pacePercent = paceExpected > 0 ? Math.min(100, (paceActual / paceExpected) * 100) : 0;
+  const paceWidthClass =
+    pacePercent >= 100 ? 'w-full' :
+    pacePercent >= 90 ? 'w-11/12' :
+    pacePercent >= 80 ? 'w-10/12' :
+    pacePercent >= 70 ? 'w-9/12' :
+    pacePercent >= 60 ? 'w-8/12' :
+    pacePercent >= 50 ? 'w-7/12' :
+    pacePercent >= 40 ? 'w-6/12' :
+    pacePercent >= 30 ? 'w-5/12' :
+    pacePercent >= 20 ? 'w-4/12' :
+    pacePercent >= 10 ? 'w-3/12' :
+    pacePercent > 0 ? 'w-2/12' :
+    'w-0';
 
   return (
     <div className="space-y-6">
@@ -33,14 +53,14 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
         </Card>
 
-        <Card className={data.wealthMetrics.isNegative ? 'p-6 border-red-200 bg-red-50' : 'p-6'}>
+        <Card className={data.wealthMetrics.isNegative ? 'p-6 border-red-400 bg-red-100 dark:bg-red-950/40' : 'p-6'}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted mb-1">{data.wealthMetrics.isNegative ? 'Wealth Deficit' : 'Wealth Created'}</p>
-              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-600' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
-              <p className="text-xs text-muted mt-1">{data.wealthMetrics.isNegative ? 'Spending exceeds income - deficit period' : 'Income - Real Spending (Savings + Remaining Income)'}</p>
+              <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : 'text-muted'}`}>{data.wealthMetrics.isNegative ? 'Wealth Deficit' : 'Wealth Created'}</p>
+              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
+              <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : 'text-muted'}`}>{data.wealthMetrics.isNegative ? 'Spending exceeds income - deficit period' : 'Income - Real Spending (Savings + Remaining Income)'}</p>
             </div>
-            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-500' : 'text-sky-500'} />
+            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : 'text-sky-500'} />
           </div>
         </Card>
 
@@ -77,8 +97,22 @@ export function DashboardContent({ data }: DashboardContentProps) {
       </div>
 
       <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-4">Period Summary</h3>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <h3 className="text-sm font-semibold">Period Summary</h3>
+          <span className="text-xs text-muted whitespace-nowrap">
+            #{data.currentPeriod.index} ({periodRange})
+          </span>
+        </div>
         <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2">
+            <div>
+              <p className="text-sm font-medium">Carry Forward</p>
+              <p className="text-xs text-muted">Brought in from previous pay period</p>
+            </div>
+            <p className={`text-sm font-semibold ${carryForwardClass}`}>
+              {carryForwardSign}${data.cashMetrics.opening}
+            </p>
+          </div>
           <StatCard label="Period Income" value={`$${data.cashMetrics.income}`} icon="📥" />
           <StatCard
             label="Total Expenses"
@@ -131,7 +165,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
                 : data.paceMetrics.status === 'YELLOW'
                 ? 'bg-yellow-600'
                 : 'bg-green-600'
-            }`} style={{ width: `${Math.min(100, (parseFloat(data.paceMetrics.actualSpend) / parseFloat(data.paceMetrics.expectedSpend)) * 100)}%` }}></div>
+            } ${paceWidthClass}`}></div>
           </div>
         </div>
       </Card>
@@ -158,24 +192,64 @@ export function DashboardContent({ data }: DashboardContentProps) {
       </Card>
 
       <Card className="p-4 bg-gradient-to-br from-sky-50 dark:from-sky-950 to-transparent">
-        <h3 className="text-sm font-semibold mb-3">Next Period Forecast ({data.forecast.confidence})</h3>
+        <h3 className="text-sm font-semibold mb-3">
+          Next Period Forecast 
+          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+            data.forecast.confidence === 'HIGH' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
+            data.forecast.confidence === 'MEDIUM' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' :
+            'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
+          }`}>
+            {data.forecast.confidence}
+          </span>
+        </h3>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted">Projected Expenses:</span>
-            <span className="font-medium">${data.forecast.nextSpending}</span>
+            <span className="text-muted">Income:</span>
+            <span className="font-medium">
+              ${data.forecast.income.min} - ${data.forecast.income.max}
+              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.income.likely})</span>
+            </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted">Projected Savings:</span>
-            <span className="font-medium">${data.forecast.nextSavings}</span>
+            <span className="text-muted">Expenses:</span>
+            <span className="font-medium">
+              ${data.forecast.spending.min} - ${data.forecast.spending.max}
+              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.spending.likely})</span>
+            </span>
           </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted">Savings:</span>
+            <span className="font-medium">
+              ${data.forecast.savings.min} - ${data.forecast.savings.max}
+              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.savings.likely})</span>
+            </span>
+          </div>
+          {parseFloat(data.forecast.discretionaryBuffer.likely) > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted">Buffer (unknowns):</span>
+              <span className="font-medium text-amber-600 dark:text-amber-400">
+                ~${data.forecast.discretionaryBuffer.likely}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between text-sm pt-2 border-t border-sky-200 dark:border-sky-800">
             <span className="font-medium">Projected Cash:</span>
-            <span className="font-bold">${data.forecast.nextEndingCash}</span>
+            <div className="text-right">
+              <div className="font-bold">${data.forecast.endingCash.likely}</div>
+              <div className="text-xs text-muted-foreground">
+                (${data.forecast.endingCash.min} - ${data.forecast.endingCash.max})
+              </div>
+            </div>
           </div>
           {data.forecast.warnings.length > 0 && (
-            <ul className="pt-2 text-xs text-amber-700 dark:text-amber-400 space-y-1">
-              {data.forecast.warnings.slice(0, 2).map((warning) => (
-                <li key={warning}>{warning}</li>
+            <ul className="pt-2 text-xs space-y-1">
+              {data.forecast.warnings.slice(0, 3).map((warning) => (
+                <li key={warning} className={
+                  warning.includes('🚨') ? 'text-red-700 dark:text-red-400 font-medium' :
+                  'text-amber-700 dark:text-amber-400'
+                }>
+                  {warning}
+                </li>
               ))}
             </ul>
           )}

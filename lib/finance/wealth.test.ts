@@ -12,9 +12,9 @@ describe('wealth calculations', () => {
     expect(result.toFixed(2)).toBe('2845.00');
   });
 
-  it('does not return negative wealth', () => {
+  it('returns negative wealth when spending exceeds income', () => {
     const result = calculateWealthCreated(new Decimal(500), new Decimal(700));
-    expect(result.toFixed(2)).toBe('0.00');
+    expect(result.toFixed(2)).toBe('-200.00');
   });
 
   it('calculates savings rate with precision', () => {

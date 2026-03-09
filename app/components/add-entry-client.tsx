@@ -23,7 +23,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
   const [entryType, setEntryType] = useState<'INCOME' | 'EXPENSE' | 'SAVINGS'>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState('');
   const [categoryId, setCategoryId] = useState(() => categories[0]?.id ?? '');
   const [backlogText, setBacklogText] = useState('');
   const [toast, setToast] = useState<{
@@ -35,6 +35,13 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     () => categories.filter((c) => (entryType === 'EXPENSE' ? c.type !== 'INCOME' : c.type === entryType)),
     [categories, entryType]
   );
+
+  useEffect(() => {
+    // Initialize date on client only to avoid SSR/client timezone hydration mismatch.
+    if (!date) {
+      setDate(new Date().toISOString().slice(0, 10));
+    }
+  }, [date]);
 
   useEffect(() => {
     if (!filteredCategories.length) {
@@ -60,7 +67,8 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     }
 
     startTransition(async () => {
-      const result = await addQuickEntry({ input: quickInput, date: new Date(date) });
+      const entryDate = date || new Date().toISOString().slice(0, 10);
+      const result = await addQuickEntry({ input: quickInput, date: entryDate });
       if (!result.success) {
         showResult(false, result.error || 'Could not save entry');
         return;
@@ -79,12 +87,13 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     }
 
     startTransition(async () => {
+      const entryDate = date || new Date().toISOString().slice(0, 10);
       const result = await addTransaction({
         amount,
         categoryId,
         description,
         entryType,
-        date: new Date(date),
+        date: entryDate,
         periodId,
       });
 
@@ -215,7 +224,14 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
 
     startTransition(async () => {
       const rows = parseBacklogRows(backlogText);
-      const result = await importBacklogEntries({ rows });
+      
+      // Convert Date objects to ISO date strings
+      const rowsWithIsoDate = rows.map(row => ({
+        ...row,
+        date: row.date.toISOString().split('T')[0], // Convert to YYYY-MM-DD
+      }));
+      
+      const result = await importBacklogEntries({ rows: rowsWithIsoDate });
 
       if (!result.success || !result.data) {
         showResult(false, result.error || 'Backlog import failed');

@@ -10,7 +10,41 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { startOfDay } from 'date-fns';
 import { formatPeriodLabel, getPeriodForDate } from '@/lib/periods';
+
+async function computeCarryForwardForPeriod(periodId: string): Promise<Decimal> {
+  const period = await prisma.period.findUnique({
+    where: { id: periodId },
+    include: {
+      ledgerEntries: {
+        include: {
+          category: true,
+        },
+      },
+    },
+  });
+
+  if (!period) {
+    return new Decimal(0);
+  }
+
+  const income = period.ledgerEntries
+    .filter((entry) => entry.entryType === 'INCOME')
+    .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
+
+  const spending = period.ledgerEntries
+    .filter((entry) => entry.category?.countsAsExpense)
+    .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
+
+  const savings = period.ledgerEntries
+    .filter((entry) => entry.category?.countsAsSavings)
+    .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
+
+  // Carry-forward uses period net leftover only:
+  // Income - Expenses - Savings
+  return income.minus(spending).minus(savings);
+}
 
 /**
  * Get period by ID with all related data
@@ -34,16 +68,17 @@ export async function getPeriodById(id: string) {
 /**
  * Get current period for a user
  * Resolves to the period containing today's date
+ * Creates the period if it doesn't exist
  */
 export async function getCurrentPeriodForUser(userId: string) {
-  const now = new Date();
-  const { startDate, endDate } = getPeriodForDate(now);
-
-  return prisma.period.findFirst({
+  const today = startOfDay(new Date());
+  
+  // First try to find existing period
+  const existing = await prisma.period.findFirst({
     where: {
       userId,
-      startDate: { lte: now },
-      endDate: { gte: now },
+      startDate: { lte: today },
+      endDate: { gte: today },
     },
     include: {
       ledgerEntries: {
@@ -54,6 +89,13 @@ export async function getCurrentPeriodForUser(userId: string) {
       },
     },
   });
+
+  if (existing) {
+    return existing;
+  }
+
+  // If not found, create it
+  return ensurePeriodForDateAndUser(userId, today);
 }
 
 /**
@@ -65,8 +107,8 @@ export async function getPeriodForDateAndUser(userId: string, date: Date) {
   return prisma.period.findFirst({
     where: {
       userId,
-      startDate: { lte: endDate },
-      endDate: { gte: startDate },
+      startDate,
+      endDate,
     },
     include: {
       ledgerEntries: {
@@ -119,6 +161,31 @@ export async function getRecentPeriods(userId: string, count: number = 6) {
 }
 
 /**
+ * Get most recent period that has at least one ledger entry
+ */
+export async function getMostRecentPeriodWithEntries(userId: string) {
+  return prisma.period.findFirst({
+    where: {
+      userId,
+      ledgerEntries: {
+        some: {},
+      },
+    },
+    orderBy: { endDate: 'desc' },
+    include: {
+      ledgerEntries: {
+        include: {
+          category: true,
+          savingsAllocations: true,
+          notes: true,
+        },
+        orderBy: { date: 'desc' },
+      },
+    },
+  });
+}
+
+/**
  * Create a new period
  */
 export async function createPeriod(
@@ -156,12 +223,25 @@ export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
     take: 1,
   });
 
-  // Opening cash = previous period's ending cash, or 0 if no previous period
+  // Opening cash = previous period's carry-forward amount (net leftover), or default if no previous period
   let openingCash = new Decimal(0);
   if (previousPeriod && previousPeriod.closingCashActual) {
     openingCash = previousPeriod.closingCashActual;
-  } else if (previousPeriod && previousPeriod.closingCashExpected) {
-    openingCash = previousPeriod.closingCashExpected;
+  } else if (previousPeriod) {
+    // Calculate carry-forward from actual period transactions.
+    const carryForward = await computeCarryForwardForPeriod(previousPeriod.id);
+    openingCash = carryForward;
+
+    // Persist computed carry-forward on previous period for auditability/reporting.
+    await prisma.period.update({
+      where: { id: previousPeriod.id },
+      data: {
+        closingCashExpected: carryForward,
+      },
+    });
+  } else {
+    // Very first period starts from 0 unless manually adjusted later.
+    openingCash = new Decimal(0);
   }
 
   return createPeriod({

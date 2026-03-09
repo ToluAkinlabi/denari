@@ -8,34 +8,44 @@ import { addDays, startOfDay, endOfDay } from 'date-fns';
 /**
  * First payday: January 9, 2026
  * Biweekly cycle: 14 days
- * Each period runs from payday through 13 days later
+ * First payday is the END of the first period (Period 0: Dec 27, 2025 - Jan 9, 2026)
+ * Each period is 14 days with inclusive boundaries on both start and end dates
  */
-const FIRST_PAYDAY = new Date('2026-01-09');
+const FIRST_PAYDAY = new Date(2026, 0, 9); // Local date: Jan 9, 2026
 const CYCLE_LENGTH_DAYS = 14;
 
 /**
  * Get the pay cycle index for a given date
+ * Payday is the END of a period, so dates after payday belong to the next period
  */
 export function getPayCycleIndex(date: Date): number {
   const daysSinceFirstPayday = Math.floor(
     (date.getTime() - FIRST_PAYDAY.getTime()) / (1000 * 60 * 60 * 24)
   );
+  
+  // If date is after the payday, it belongs to the next period
+  // Example: Jan 10 is 1 day after Jan 9 payday, so it's in Period 1, not Period 0
+  if (daysSinceFirstPayday > 0) {
+    return Math.ceil(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
+  }
+  
   return Math.floor(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
 }
 
 /**
  * Get period start date from cycle index
+ * Period 0 ends on FIRST_PAYDAY, so it starts 13 days before
  */
 export function getPeriodStartDate(cycleIndex: number): Date {
-  return addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS);
+  return addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS - (CYCLE_LENGTH_DAYS - 1));
 }
 
 /**
  * Get period end date from cycle index
+ * Each period ends on a payday
  */
 export function getPeriodEndDate(cycleIndex: number): Date {
-  const endDate = addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS + 13);
-  return endDate;
+  return addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS);
 }
 
 /**
@@ -66,7 +76,7 @@ export function getPeriodForDate(date: Date): Period {
     cycleIndex,
     startDate,
     endDate,
-    payDate: startDate,
+    payDate: endDate, // Payday is the end date, not start date
     label: formatPeriodLabel(startDate, endDate),
   };
 }

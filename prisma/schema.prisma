@@ -27,17 +27,23 @@ model User {
 
 // Categories - financial categorization
 model Category {
-  id              String  @id @default(cuid())
-  userId          String
-  name            String
-  type            CategoryType
-  group           CategoryGroup
-  color           String  @default("#gray")
-  icon            String  @default("Wallet")
-  countsAsExpense Boolean @default(false)
-  countsAsSavings Boolean @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String  @id @default(cuid())
+  userId               String
+  name                 String
+  type                 CategoryType
+  group                CategoryGroup
+  color                String  @default("#gray")
+  icon                 String  @default("Wallet")
+  countsAsExpense      Boolean @default(false)
+  countsAsSavings      Boolean @default(false)
+  
+  // Forecasting configuration
+  defaultStrategy      ForecastStrategy @default(UNKNOWN)
+  isDiscretionary      Boolean @default(false)  // Can be delayed/skipped
+  expectedFrequency    String  @default("VARIABLE") // BIWEEKLY, MONTHLY, QUARTERLY, ANNUAL, VARIABLE
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   ledgerEntries LedgerEntry[]
@@ -101,17 +107,24 @@ enum PeriodStatus {
 
 // Ledger Entries - canonical source of all money movements
 model LedgerEntry {
-  id            String   @id @default(cuid())
-  userId        String
-  periodId      String
-  date          DateTime
-  amount        Decimal  @db.Decimal(12, 2)
-  categoryId    String
-  entryType     LedgerEntryType
-  source        String? // transaction, summary, manual, etc
-  description   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String            @id @default(cuid())
+  userId            String
+  periodId          String
+  date              DateTime
+  amount            Decimal           @db.Decimal(12, 2)
+  categoryId        String
+  entryType         LedgerEntryType
+  source            String?           // transaction, summary, manual, etc
+  description       String?
+  
+  // Forecasting metadata
+  tags              String[]          @default([])     // ["bonus", "gift", "annual", "quarterly"]
+  forecastStrategy  ForecastStrategy  @default(UNKNOWN)
+  nextOccurrence    DateTime?         // Expected date of repeat
+  isProvisional     Boolean           @default(false)  // True if uncertain
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   period             Period             @relation(fields: [periodId], references: [id], onDelete: Cascade)
@@ -132,6 +145,14 @@ enum LedgerEntryType {
   TRANSFER
   SUMMARY_ENTRY
   ADJUSTMENT
+}
+
+enum ForecastStrategy {
+  KNOWN_RECURRING    // Same amount each period (paycheck, rent)
+  KNOWN_VARIABLE     // Varies but within predictable range (groceries)
+  KNOWN_IRREGULAR    // Known but infrequent (flights, annual insurance)
+  UNKNOWN            // New or unpredictable (put in buffer)
+  ONE_TIME           // Explicitly marked as non-repeating
 }
 
 // Savings Allocations - bucket breakdown for savings entries

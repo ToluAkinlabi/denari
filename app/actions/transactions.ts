@@ -62,17 +62,20 @@ async function ensureDefaultCategories(userId: string) {
     color: string;
     countsAsExpense: boolean;
     countsAsSavings: boolean;
+    defaultStrategy: 'KNOWN_RECURRING' | 'KNOWN_VARIABLE' | 'KNOWN_IRREGULAR' | 'UNKNOWN' | 'ONE_TIME';
+    expectedFrequency: string;
+    isDiscretionary: boolean;
   }> = [
-    { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', countsAsExpense: false, countsAsSavings: false },
-    { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false },
-    { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true },
+    { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', countsAsExpense: false, countsAsSavings: false, defaultStrategy: 'KNOWN_RECURRING', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
+    { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
+    { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: false },
+    { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: true },
+    { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: true },
+    { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
   ];
 
   const created = await Promise.all(
@@ -379,11 +382,17 @@ export async function importBacklogEntries(
           throw new Error(`Unknown category "${row.categoryName}"`);
         }
 
-        const period = await periodsRepo.ensurePeriodForDateAndUser(userId, row.date);
+        // Parse ISO date string to local Date
+        const entryDate = parseIsoDateString(row.date);
+        if (!entryDate) {
+          throw new Error('Invalid date format');
+        }
+
+        const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
         const type = row.entryType || (category.type === 'INCOME' ? 'INCOME' : category.type === 'SAVINGS' ? 'SAVINGS' : 'EXPENSE');
 
         const entry = await ledgerRepo.createLedgerEntry({
-          date: row.date,
+          date: entryDate,
           amount: new Decimal(row.amount),
           categoryId: category.id,
           description: row.description || category.name,
@@ -416,6 +425,9 @@ export async function importBacklogEntries(
         errors.push(`Row ${i + 1}: ${(err as Error).message}`);
       }
     }
+
+    // Revalidate to refresh the dashboard
+    revalidatePath('/');
 
     return {
       success: true,

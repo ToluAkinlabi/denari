@@ -97,8 +97,52 @@ export async function createCategory(data: {
   countsAsExpense: boolean;
   countsAsSavings: boolean;
   icon?: string;
+  defaultStrategy?: Prisma.CategoryUncheckedCreateInput['defaultStrategy'];
+  expectedFrequency?: string;
+  isDiscretionary?: boolean;
 }) {
   return prisma.category.create({
+    data,
+  });
+}
+
+/**
+ * Get category forecast settings for a user
+ */
+export async function getCategoryForecastSettingsForUser(userId: string) {
+  return prisma.category.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      defaultStrategy: true,
+      expectedFrequency: true,
+      isDiscretionary: true,
+      countsAsExpense: true,
+      countsAsSavings: true,
+      type: true,
+    },
+  });
+}
+
+/**
+ * Update forecast settings for a category
+ */
+export async function updateCategoryForecastSettings(
+  categoryId: string,
+  userId: string,
+  data: {
+    defaultStrategy: Prisma.CategoryUpdateInput['defaultStrategy'];
+    expectedFrequency: string;
+    isDiscretionary: boolean;
+  }
+) {
+  return prisma.category.updateMany({
+    where: {
+      id: categoryId,
+      userId,
+    },
     data,
   });
 }

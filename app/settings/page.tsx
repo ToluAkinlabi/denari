@@ -1,9 +1,12 @@
-'use client';
-
 import { Card } from '@/components/card';
 import { Bell, Moon, Lock, Database, HelpCircle, LogOut } from 'lucide-react';
+import { getCategoryForecastSettings } from '@/app/actions/settings';
+import { SettingsForecastControls } from '@/app/components/settings-forecast-controls';
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const settingsResult = await getCategoryForecastSettings();
+  const forecastSettings = settingsResult.success && settingsResult.data ? settingsResult.data : [];
+
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6">
       <div className="space-y-6 pb-10">
@@ -16,13 +19,14 @@ export default function SettingsPage() {
         <div>
           <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Appearance</h3>
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
+            <div className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
               <div className="flex items-center gap-3">
                 <Moon size={20} className="text-gray-600 dark:text-gray-400" />
                 <span>Dark Mode</span>
               </div>
-              <input type="checkbox" defaultChecked className="w-5 h-5" />
-            </button>
+              <label className="sr-only" htmlFor="settings-dark-mode">Dark Mode</label>
+              <input id="settings-dark-mode" type="checkbox" defaultChecked className="w-5 h-5" />
+            </div>
           </Card>
         </div>
 
@@ -30,13 +34,14 @@ export default function SettingsPage() {
         <div>
           <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Notifications</h3>
           <Card className="p-4">
-            <button className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
+            <div className="w-full flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-800 last:border-0">
               <div className="flex items-center gap-3">
                 <Bell size={20} className="text-gray-600 dark:text-gray-400" />
                 <span>Period Reminders</span>
               </div>
-              <input type="checkbox" defaultChecked className="w-5 h-5" />
-            </button>
+              <label className="sr-only" htmlFor="settings-period-reminders">Period Reminders</label>
+              <input id="settings-period-reminders" type="checkbox" defaultChecked className="w-5 h-5" />
+            </div>
           </Card>
         </div>
 
@@ -76,6 +81,8 @@ export default function SettingsPage() {
             </button>
           </Card>
         </div>
+
+        <SettingsForecastControls initialSettings={forecastSettings} />
 
         {/* Support */}
         <div>

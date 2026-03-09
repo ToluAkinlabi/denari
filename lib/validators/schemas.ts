@@ -142,7 +142,7 @@ export const backlogImportSchema = z.object({
   rows: z
     .array(
       z.object({
-        date: z.date(),
+        date: isoDateString.refine(val => !!val, 'Date is required'),
         amount: positiveCurrencySchema,
         categoryName: z.string().min(1).max(100),
         entryType: z.enum(['INCOME', 'EXPENSE', 'SAVINGS']).optional(),
