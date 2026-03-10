@@ -8,7 +8,7 @@
 'use server';
 
 import { Decimal } from '@prisma/client/runtime/library';
-import { differenceInCalendarDays, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
@@ -176,6 +176,22 @@ export async function getDashboardData(
       currentPeriod.id
     );
 
+    const windowEntries = await ledgerRepo.getLedgerEntriesForUserDateRange(
+      resolvedUserId,
+      startOfDay(currentPeriod.startDate),
+      endOfDay(currentPeriod.endDate)
+    );
+    const normalizedWindowEntries = windowEntries.map((entry) => ({
+      ...entry,
+      savingsAllocations: [],
+      notes: [],
+    }));
+
+    const currentById = new Map<string, (typeof allCurrentPeriodEntries)[number]>();
+    allCurrentPeriodEntries.forEach((entry) => currentById.set(entry.id, entry));
+    normalizedWindowEntries.forEach((entry) => currentById.set(entry.id, entry));
+    allCurrentPeriodEntries = Array.from(currentById.values());
+
     // If current period is empty, fall back to the most recent period with data.
     // This keeps dashboard/transactions useful right after backlog imports.
     if (!options?.periodId && allCurrentPeriodEntries.length === 0) {
@@ -183,6 +199,21 @@ export async function getDashboardData(
       if (mostRecentWithData) {
         currentPeriod = mostRecentWithData;
         allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id);
+
+        const fallbackWindowEntries = await ledgerRepo.getLedgerEntriesForUserDateRange(
+          resolvedUserId,
+          startOfDay(currentPeriod.startDate),
+          endOfDay(currentPeriod.endDate)
+        );
+        const normalizedFallbackWindowEntries = fallbackWindowEntries.map((entry) => ({
+          ...entry,
+          savingsAllocations: [],
+          notes: [],
+        }));
+        const fallbackById = new Map<string, (typeof allCurrentPeriodEntries)[number]>();
+        allCurrentPeriodEntries.forEach((entry) => fallbackById.set(entry.id, entry));
+        normalizedFallbackWindowEntries.forEach((entry) => fallbackById.set(entry.id, entry));
+        allCurrentPeriodEntries = Array.from(fallbackById.values());
       }
     }
     const periodStart = startOfDay(currentPeriod.startDate);

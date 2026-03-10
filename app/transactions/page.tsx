@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/card';
 import {
   getTransactions,
@@ -33,6 +33,9 @@ export default function TransactionsPage() {
     description: '',
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
+  const hasHydratedOnce = useRef(false);
+  const seenTransactionIds = useRef<Set<string>>(new Set());
 
   const ITEMS_PER_PAGE = 10;
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
@@ -46,6 +49,32 @@ export default function TransactionsPage() {
         offset,
       });
       if (response.success && response.data) {
+        const nextIds = new Set(response.data.transactions.map((tx) => tx.id));
+
+        if (!hasHydratedOnce.current) {
+          hasHydratedOnce.current = true;
+          seenTransactionIds.current = nextIds;
+        } else {
+          const newlyVisible = [...nextIds].filter((id) => !seenTransactionIds.current.has(id));
+          if (newlyVisible.length > 0) {
+            setRecentlyAddedIds((prev) => {
+              const merged = new Set(prev);
+              newlyVisible.forEach((id) => merged.add(id));
+              return merged;
+            });
+
+            setTimeout(() => {
+              setRecentlyAddedIds((prev) => {
+                const next = new Set(prev);
+                newlyVisible.forEach((id) => next.delete(id));
+                return next;
+              });
+            }, 7000);
+          }
+
+          seenTransactionIds.current = nextIds;
+        }
+
         setTransactions(response.data.transactions);
         setTotalCount(response.data.total);
         setError(null);
@@ -187,6 +216,7 @@ export default function TransactionsPage() {
             {transactions.map((transaction) => {
               const isEditing = editingId === transaction.id;
               const isDeleting = deleteConfirm === transaction.id;
+              const isRecentlyAdded = recentlyAddedIds.has(transaction.id);
               const typeColor =
                 transaction.type === 'INCOME'
                   ? 'text-green-600'
@@ -195,7 +225,14 @@ export default function TransactionsPage() {
                   : 'text-blue-600';
 
               return (
-                <Card key={transaction.id} className="p-4">
+                <Card
+                  key={transaction.id}
+                  className={`p-4 transition-colors ${
+                    isRecentlyAdded
+                      ? 'border-emerald-300 bg-emerald-50/70 dark:bg-emerald-900/20'
+                      : ''
+                  }`}
+                >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">

@@ -10,6 +10,7 @@
 import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { CategoryGroup, CategoryType, ForecastStrategy } from '@prisma/client';
+import { startOfDay, endOfDay } from 'date-fns';
 import { detectFrequency } from '@/lib/finance/frequency-detection';
 import { parseQuickEntry, validateParsedEntry } from '@/lib/parsers/quickEntry';
 import {
@@ -959,7 +960,34 @@ export async function getTransactions(
 > {
   try {
     const userId = await resolveUserId();
-    let entries = await ledgerRepo.getLedgerEntriesForPeriod(periodId);
+    const period = await periodsRepo.getPeriodById(periodId);
+    if (!period) {
+      return {
+        success: false,
+        error: 'Period not found',
+      };
+    }
+
+    const periodEntries = await ledgerRepo.getLedgerEntriesForPeriod(periodId);
+    const windowEntries = await ledgerRepo.getLedgerEntriesForUserDateRange(
+      userId,
+      startOfDay(period.startDate),
+      endOfDay(period.endDate)
+    );
+    const normalizedWindowEntries = windowEntries.map((entry) => ({
+      ...entry,
+      savingsAllocations: [],
+      notes: [],
+    }));
+
+    // Merge by id so legacy entries tied to overlapping period IDs still appear.
+    const mergedById = new Map<string, (typeof periodEntries)[number]>();
+    periodEntries.forEach((entry) => mergedById.set(entry.id, entry));
+    normalizedWindowEntries.forEach((entry) => mergedById.set(entry.id, entry));
+
+    let entries = Array.from(mergedById.values()).sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    );
 
     // Apply filters
     if (filters?.type) {

@@ -13,6 +13,32 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { startOfDay } from 'date-fns';
 import { formatPeriodLabel, getPeriodForDate } from '@/lib/periods';
 
+function pickBestMatchingPeriod<T extends { startDate: Date; endDate: Date; ledgerEntries: unknown[] }>(
+  periods: T[],
+  windowStart: Date,
+  windowEnd: Date
+) {
+  if (periods.length === 0) return null;
+
+  let best = periods[0];
+  let bestScore = -1;
+
+  for (const period of periods) {
+    const hasExactRange =
+      period.startDate.getTime() === windowStart.getTime() &&
+      period.endDate.getTime() === windowEnd.getTime();
+    const entriesCount = period.ledgerEntries.length;
+    const score = (hasExactRange ? 100000 : 0) + entriesCount;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = period;
+    }
+  }
+
+  return best;
+}
+
 async function computeCarryForwardForPeriod(periodId: string): Promise<Decimal> {
   const period = await prisma.period.findUnique({
     where: { id: periodId },
@@ -72,9 +98,11 @@ export async function getPeriodById(id: string) {
  */
 export async function getCurrentPeriodForUser(userId: string) {
   const today = startOfDay(new Date());
+  const todayWindow = getPeriodForDate(today);
   
-  // First try to find existing period
-  const existing = await prisma.period.findFirst({
+  // Find all overlapping current periods and pick the best match.
+  // This guards against legacy duplicate periods with same human label.
+  const existing = await prisma.period.findMany({
     where: {
       userId,
       startDate: { lte: today },
@@ -90,8 +118,8 @@ export async function getCurrentPeriodForUser(userId: string) {
     },
   });
 
-  if (existing) {
-    return existing;
+  if (existing.length > 0) {
+    return pickBestMatchingPeriod(existing, todayWindow.startDate, todayWindow.endDate);
   }
 
   // If not found, create it
@@ -104,11 +132,11 @@ export async function getCurrentPeriodForUser(userId: string) {
 export async function getPeriodForDateAndUser(userId: string, date: Date) {
   const { startDate, endDate } = getPeriodForDate(date);
 
-  return prisma.period.findFirst({
+  const matches = await prisma.period.findMany({
     where: {
       userId,
-      startDate,
-      endDate,
+      startDate: { lte: endDate },
+      endDate: { gte: startDate },
     },
     include: {
       ledgerEntries: {
@@ -119,6 +147,8 @@ export async function getPeriodForDateAndUser(userId: string, date: Date) {
       },
     },
   });
+
+  return pickBestMatchingPeriod(matches, startDate, endDate);
 }
 
 /**
