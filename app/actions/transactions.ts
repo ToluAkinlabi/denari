@@ -831,6 +831,7 @@ export async function deleteTransaction(
     await ledgerRepo.deleteLedgerEntry(entryId);
 
     revalidatePath('/');
+    revalidatePath('/transactions');
     return {
       success: true,
     };
@@ -911,6 +912,7 @@ export async function updateTransaction(
     }
 
     revalidatePath('/');
+    revalidatePath('/transactions');
     return {
       success: true,
       data: { id: updated.id },
