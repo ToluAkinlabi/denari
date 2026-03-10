@@ -15,6 +15,13 @@ interface AddEntryClientProps {
 }
 
 export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
+  const formatLocalDateForInput = (value: Date) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [tab, setTab] = useState<'quick' | 'detailed' | 'backlog'>('quick');
   const [quickInput, setQuickInput] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -37,9 +44,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
   );
 
   useEffect(() => {
-    // Initialize date on client only to avoid SSR/client timezone hydration mismatch.
+    // Initialize with local calendar date to avoid UTC day-shift on period boundaries.
     if (!date) {
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(formatLocalDateForInput(new Date()));
     }
   }, [date]);
 
@@ -67,7 +74,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     }
 
     startTransition(async () => {
-      const entryDate = date || new Date().toISOString().slice(0, 10);
+      const entryDate = date || formatLocalDateForInput(new Date());
       const result = await addQuickEntry({ input: quickInput, date: entryDate });
       if (!result.success) {
         showResult(false, result.error || 'Could not save entry');
@@ -87,7 +94,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     }
 
     startTransition(async () => {
-      const entryDate = date || new Date().toISOString().slice(0, 10);
+      const entryDate = date || formatLocalDateForInput(new Date());
       const result = await addTransaction({
         amount,
         categoryId,
