@@ -84,6 +84,28 @@ export default function TransactionsPage() {
     loadTransactions();
   }, [loadTransactions]);
 
+  useEffect(() => {
+    const refresh = () => {
+      void loadTransactions();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [loadTransactions]);
+
   // Reload when page changes
   useEffect(() => {
     if (currentPeriodId && currentPage > 0) {
