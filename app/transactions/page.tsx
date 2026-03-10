@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card } from '@/components/card';
-import { getTransactions, deleteTransaction, updateTransaction } from '@/app/actions/transactions';
-import { getDashboardData } from '@/app/actions/dashboard';
+import {
+  getTransactions,
+  deleteTransaction,
+  updateTransaction,
+  getCurrentPeriodId,
+} from '@/app/actions/transactions';
 import { Trash2, Edit2, X, Check } from 'lucide-react';
 
 interface Transaction {
@@ -33,11 +37,7 @@ export default function TransactionsPage() {
   const ITEMS_PER_PAGE = 10;
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  async function loadTransactionPage(periodId: string, page: number) {
+  const loadTransactionPage = useCallback(async (periodId: string, page: number) => {
     setLoading(true);
     try {
       const offset = (page - 1) * ITEMS_PER_PAGE;
@@ -52,41 +52,44 @@ export default function TransactionsPage() {
       } else {
         setError(response.error ?? 'Could not load transactions');
       }
-    } catch (err) {
+    } catch {
       setError('Unexpected error loading transactions');
     }
     setLoading(false);
-  }
+  }, []);
 
-  async function loadTransactions() {
+  const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      // Get current period first
-      const dashboardResponse = await getDashboardData();
-      if (!dashboardResponse.success || !dashboardResponse.data) {
+      const periodResponse = await getCurrentPeriodId();
+      if (!periodResponse.success || !periodResponse.data) {
         setError('Could not load current period');
         setLoading(false);
         return;
       }
 
-      const periodId = dashboardResponse.data.currentPeriod.id;
+      const periodId = periodResponse.data.periodId;
       setCurrentPeriodId(periodId);
 
       // Load first page
       await loadTransactionPage(periodId, 1);
       setCurrentPage(1);
-    } catch (err) {
+    } catch {
       setError('Unexpected error loading transactions');
       setLoading(false);
     }
-  }
+  }, [loadTransactionPage]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
   // Reload when page changes
   useEffect(() => {
     if (currentPeriodId && currentPage > 0) {
       loadTransactionPage(currentPeriodId, currentPage);
     }
-  }, [currentPage]);
+  }, [currentPage, currentPeriodId, loadTransactionPage]);
 
   async function handleDelete(id: string) {
     const response = await deleteTransaction(id);

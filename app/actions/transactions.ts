@@ -247,6 +247,36 @@ export async function getAddEntryOptions(
 }
 
 /**
+ * Get the current period id for transaction listing pages.
+ * Avoids dashboard fallback behavior so transactions align with today's period.
+ */
+export async function getCurrentPeriodId(): Promise<ApiResponse<{ periodId: string }>> {
+  try {
+    const resolvedUserId = await resolveUserId();
+    const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
+
+    if (!currentPeriod) {
+      return {
+        success: false,
+        error: 'No current period found',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        periodId: currentPeriod.id,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
  * Add transaction via quick entry
  *
  * Workflow:
@@ -352,6 +382,7 @@ export async function addQuickEntry(
     }
 
     revalidatePath('/');
+    revalidatePath('/transactions');
     return {
       success: true,
       data: {
@@ -470,6 +501,7 @@ export async function addTransaction(
     }
 
     revalidatePath('/');
+    revalidatePath('/transactions');
     return {
       success: true,
       data: {

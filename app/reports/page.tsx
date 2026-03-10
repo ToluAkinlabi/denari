@@ -16,7 +16,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { MonthlyReportData } from '@/app/actions/reports';
-import { ScenarioPlanner } from '@/app/components/scenario-planner';
 
 export default function ReportsPage() {
   const [report, setReport] = useState<{ success: boolean; data?: MonthlyReportData; error?: string }>({ success: false });
@@ -119,12 +118,6 @@ export default function ReportsPage() {
             </BarChart>
           </ResponsiveContainer>
         </Card>
-
-        <ScenarioPlanner
-          baseIncome={Number(data.income)}
-          baseSpending={Number(data.spending)}
-          baseSavings={Number(data.savings)}
-        />
 
         <Card className="p-4">
           <h3 className="font-semibold mb-4">Spending by Category (Heatmap)</h3>

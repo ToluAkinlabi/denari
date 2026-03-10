@@ -1,6 +1,8 @@
 import { DashboardContent } from '@/components/dashboard';
 import { getDashboardData } from '@/app/actions/dashboard';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Dashboard - Ledge',
   description: 'Your financial overview at a glance',
