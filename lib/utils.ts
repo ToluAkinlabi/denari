@@ -47,19 +47,27 @@ export function formatCompact(value: string | number | Decimal): string {
 }
 
 /**
+ * Parse a stored date to its UTC calendar date, avoiding timezone shift.
+ * Dates are stored as UTC midnight; this extracts the UTC y/m/d so display
+ * always shows the calendar date the user intended.
+ */
+function toUTCCalendarDate(date: Date | string): Date {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/**
  * Format date for display
  */
 export function formatDateDisplay(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return format(dateObj, 'MMM d, yyyy');
+  return format(toUTCCalendarDate(date), 'MMM d, yyyy');
 }
 
 /**
  * Format date for input
  */
 export function formatDateInput(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return format(dateObj, 'yyyy-MM-dd');
+  return format(toUTCCalendarDate(date), 'yyyy-MM-dd');
 }
 
 /**
@@ -260,7 +268,8 @@ export function groupByDate<T extends { date: Date | string }>(
   const grouped = new Map<string, T[]>();
 
   items.forEach((item) => {
-    const date = typeof item.date === 'string' ? new Date(item.date) : item.date;
+    const d = typeof item.date === 'string' ? new Date(item.date) : item.date;
+    const date = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     const key = format(date, 'yyyy-MM-dd');
 
     if (!grouped.has(key)) {

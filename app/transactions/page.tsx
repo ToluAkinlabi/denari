@@ -8,6 +8,7 @@ import {
   updateTransaction,
   getCurrentPeriodId,
 } from '@/app/actions/transactions';
+import { formatDateDisplay } from '@/lib/utils';
 import { Trash2, Edit2, X, Check } from 'lucide-react';
 
 interface Transaction {
@@ -267,7 +268,7 @@ export default function TransactionsPage() {
                               </span>
                             </div>
                             <div className="flex items-center gap-3 mt-1 text-sm text-muted">
-                              <span>{new Date(transaction.date).toLocaleDateString()}</span>
+                              <span>{formatDateDisplay(transaction.date)}</span>
                               {transaction.categoryName && (
                                 <>
                                   <span>•</span>
