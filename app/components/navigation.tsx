@@ -32,7 +32,8 @@ export function Navigation() {
           <Link
             key={href}
             href={href}
-            className={`flex flex-col items-center justify-center py-3 px-2 transition-colors duration-200 ${
+            aria-label={label}
+            className={`flex items-center justify-center py-4 px-2 transition-colors duration-200 ${
               isActive(href)
                 ? 'text-sky-500'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
@@ -40,7 +41,6 @@ export function Navigation() {
             title={label}
           >
             <Icon size={22} />
-            <span className="text-[9px] mt-0.5 font-medium leading-tight truncate w-full text-center">{label}</span>
           </Link>
         ))}
       </div>

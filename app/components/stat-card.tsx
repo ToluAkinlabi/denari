@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
+
 interface StatCardProps {
   label: string;
   value: string;
   subtitle?: string;
-  icon?: string;
+  icon?: ReactNode;
 }
 
 export function StatCard({ label, value, subtitle, icon }: StatCardProps) {
@@ -13,7 +15,7 @@ export function StatCard({ label, value, subtitle, icon }: StatCardProps) {
         <p className="text-lg font-semibold">{value}</p>
         {subtitle && <p className="text-xs text-subtle mt-1">{subtitle}</p>}
       </div>
-      {icon && <div className="text-2xl ml-2">{icon}</div>}
+      {icon && <div className="text-gray-600 dark:text-gray-300 ml-2">{icon}</div>}
     </div>
   );
 }

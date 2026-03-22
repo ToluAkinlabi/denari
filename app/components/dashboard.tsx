@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle } from 'lucide-react';
+import { TrendingUp, CheckCircle, ArrowDownCircle, ArrowUpCircle, Calendar } from 'lucide-react';
 import { Card } from './card';
 import { StatCard } from './stat-card';
 import type { DashboardData } from '@/app/actions/dashboard';
@@ -21,6 +21,8 @@ export function DashboardContent({ data }: DashboardContentProps) {
   const paceActual = Number(data.paceMetrics.actualSpend);
   const paceExpected = Number(data.paceMetrics.expectedSpend);
   const pacePercent = paceExpected > 0 ? Math.min(100, (paceActual / paceExpected) * 100) : 0;
+  const wealthChange = Number(data.wealthMetrics.created);
+  const isSpenddown = !data.wealthMetrics.isNegative && wealthChange < 0;
   const paceWidthClass =
     pacePercent >= 100 ? 'w-full' :
     pacePercent >= 90 ? 'w-11/12' :
@@ -56,11 +58,19 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <Card className={data.wealthMetrics.isNegative ? 'p-6 border-red-400 bg-red-100 dark:bg-red-950/40' : 'p-6'}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : 'text-muted'}`}>{data.wealthMetrics.isNegative ? 'Wealth Deficit' : 'Wealth Created'}</p>
-              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
-              <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : 'text-muted'}`}>{data.wealthMetrics.isNegative ? 'Spending exceeds income - deficit period' : 'Income - Real Spending (Savings + Remaining Income)'}</p>
+              <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : isSpenddown ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-muted'}`}>
+                {data.wealthMetrics.isNegative ? 'Wealth Deficit' : isSpenddown ? 'Net Spenddown' : 'Wealth Created'}
+              </p>
+              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-600 dark:text-amber-300' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
+              <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : isSpenddown ? 'text-amber-700 dark:text-amber-300' : 'text-muted'}`}>
+                {data.wealthMetrics.isNegative
+                  ? 'Actual running cash is below zero'
+                  : isSpenddown
+                  ? 'Spending exceeded period income, but carry forward covered it'
+                  : 'Income minus real spending (savings + remaining income)'}
+              </p>
             </div>
-            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : 'text-sky-500'} />
+            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-600 dark:text-amber-300' : 'text-sky-500'} />
           </div>
         </Card>
 
@@ -113,18 +123,18 @@ export function DashboardContent({ data }: DashboardContentProps) {
               {carryForwardSign}${data.cashMetrics.opening}
             </p>
           </div>
-          <StatCard label="Period Income" value={`$${data.cashMetrics.income}`} icon="inbox" />
+          <StatCard label="Period Income" value={`$${data.cashMetrics.income}`} icon={<ArrowUpCircle size={24} />} />
           <StatCard
             label="Total Expenses"
             value={`$${data.cashMetrics.spending}`}
             subtitle={`(${data.wealthMetrics.spendingPercentage} of income)`}
-            icon="outbox"
+            icon={<ArrowDownCircle size={24} />}
           />
           <StatCard
             label="Period"
             value={`#${data.currentPeriod.index}`}
             subtitle={periodRange}
-            icon="calendar"
+            icon={<Calendar size={24} />}
           />
         </div>
       </Card>
