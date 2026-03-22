@@ -1,8 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+let prisma;
 
 async function main() {
+  const { PrismaClient } = await import('@prisma/client');
+  prisma = new PrismaClient();
   const user = await prisma.user.findFirst({ where: { name: 'Personal' } });
   if (!user) {
     console.log('No user found.');
@@ -37,21 +37,22 @@ async function main() {
       .filter((e) => e.category && e.category.countsAsSavings)
       .reduce((sum, e) => sum + Number(e.amount), 0);
 
-    const periodNet = income - spending - savings;
+    const closingExpected = carry + income - spending - savings;
+    const closingActual = period.closingCashActual == null ? null : Number(period.closingCashActual);
 
     await prisma.period.update({
       where: { id: period.id },
       data: {
         openingCash: carry,
-        closingCashExpected: periodNet,
+        closingCashExpected: closingExpected,
       },
     });
 
     console.log(
-      `${period.label}: opening=${carry.toFixed(2)} income=${income.toFixed(2)} spending=${spending.toFixed(2)} savings=${savings.toFixed(2)} carry=${periodNet.toFixed(2)}`
+      `${period.label}: opening=${carry.toFixed(2)} income=${income.toFixed(2)} spending=${spending.toFixed(2)} savings=${savings.toFixed(2)} closingExpected=${closingExpected.toFixed(2)} closingActual=${closingActual === null ? 'null' : closingActual.toFixed(2)}`
     );
 
-    carry = periodNet;
+    carry = closingActual ?? closingExpected;
   }
 
   console.log('Recalculated opening/closing balances for all periods.');
@@ -63,5 +64,7 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   });

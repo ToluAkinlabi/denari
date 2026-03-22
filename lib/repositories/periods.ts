@@ -67,9 +67,8 @@ async function computeCarryForwardForPeriod(periodId: string): Promise<Decimal> 
     .filter((entry) => entry.category?.countsAsSavings)
     .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
 
-  // Carry-forward uses period net leftover only:
-  // Income - Expenses - Savings
-  return income.minus(spending).minus(savings);
+  // Closing cash = opening cash + income - expenses - savings.
+  return period.openingCash.plus(income).minus(spending).minus(savings);
 }
 
 /**
@@ -253,20 +252,20 @@ export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
     take: 1,
   });
 
-  // Opening cash = previous period's carry-forward amount (net leftover), or default if no previous period
+  // Opening cash = previous period's closing cash, or 0 for the first period.
   let openingCash = new Decimal(0);
   if (previousPeriod && previousPeriod.closingCashActual) {
     openingCash = previousPeriod.closingCashActual;
   } else if (previousPeriod) {
-    // Calculate carry-forward from actual period transactions.
-    const carryForward = await computeCarryForwardForPeriod(previousPeriod.id);
-    openingCash = carryForward;
+    // Recompute expected closing cash from opening cash plus actual activity.
+    const closingCashExpected = await computeCarryForwardForPeriod(previousPeriod.id);
+    openingCash = closingCashExpected;
 
-    // Persist computed carry-forward on previous period for auditability/reporting.
+    // Persist computed closing cash on previous period for auditability/reporting.
     await prisma.period.update({
       where: { id: previousPeriod.id },
       data: {
-        closingCashExpected: carryForward,
+        closingCashExpected,
       },
     });
   } else {

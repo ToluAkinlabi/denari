@@ -95,6 +95,21 @@ export async function getRecentLedgerEntries(
 }
 
 /**
+ * Get all ledger entries for a user
+ */
+export async function getLedgerEntriesForUser(userId: string) {
+  return prisma.ledgerEntry.findMany({
+    where: { userId },
+    include: {
+      category: true,
+      savingsAllocations: true,
+      notes: true,
+    },
+    orderBy: { date: 'desc' },
+  });
+}
+
+/**
  * Get recent ledger entries for a user/category pair
  */
 export async function getRecentLedgerEntriesForCategory(

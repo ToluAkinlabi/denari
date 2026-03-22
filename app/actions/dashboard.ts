@@ -16,7 +16,8 @@ import * as categoriesRepo from '@/lib/repositories/categories';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
-import { calculateTotalSpending, calculateSpendingByCategory } from '@/lib/finance/spending';
+import { calculateTotalSpending } from '@/lib/finance/spending';
+import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
 import {
   calculateIncome,
   calculateSavingsTransfers,
@@ -86,6 +87,7 @@ export interface DashboardData {
     emoji?: string;
     amount: string;
     percentage: string;
+    kind: 'income' | 'expense';
     trend: 'up' | 'down' | 'stable';
   }>;
   savingsRecap: {
@@ -299,27 +301,22 @@ export async function getDashboardData(
       status: paceStatus,
     };
 
-    // Category breakdown - lifetime totals across all periods
-    const allPeriodsForUser = await periodsRepo.getRecentPeriods(resolvedUserId, 100); // Get up to 100 periods
-    const allEntriesForUser: (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[] = [];
-    
-    for (const period of allPeriodsForUser) {
-      const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
-      allEntriesForUser.push(...entries);
-    }
-    
-    const categoryBreakdown = calculateSpendingByCategory(
+    // Category breakdown - lifetime totals across all user entries
+    const allEntriesForUser = await ledgerRepo.getLedgerEntriesForUser(resolvedUserId);
+
+    const categoryBreakdown = calculateCashflowByCategory(
       allEntriesForUser,
       categoryMap
     );
     const categoryData = categoryBreakdown.map((item) => {
-      const cat = categoryMap.get(item.categoryId);
-
       return {
-        name: item.categoryName || cat?.name || 'Unknown',
+        name: item.categoryName,
         emoji: undefined,
         amount: item.amount.toFixed(2),
-        percentage: item.percentage.toFixed(1) + '%',
+        percentage:
+          item.percentage.toFixed(1) +
+          (item.kind === 'income' ? '% of income' : '% of spend'),
+        kind: item.kind,
         trend: 'stable' as const,
       };
     });

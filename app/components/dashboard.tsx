@@ -171,7 +171,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
       </Card>
 
       <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-4">Spending by Category (All Time)</h3>
+        <h3 className="text-sm font-semibold mb-4">Cashflow by Category (All Time)</h3>
         <div className="space-y-2">
           {data.categoryBreakdown.map((item) => (
             <div
@@ -182,11 +182,13 @@ export function DashboardContent({ data }: DashboardContentProps) {
                 <p className="text-sm font-medium">{item.emoji ? `${item.emoji} ` : ''}{item.name}</p>
                 <p className="text-xs text-muted">{item.percentage}</p>
               </div>
-              <p className="text-sm font-semibold text-red-600">-${item.amount}</p>
+              <p className={`text-sm font-semibold ${item.kind === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {item.kind === 'income' ? '+' : '-'}${item.amount}
+              </p>
             </div>
           ))}
           {data.categoryBreakdown.length === 0 && (
-            <p className="text-sm text-muted">No spending entries in this period yet.</p>
+            <p className="text-sm text-muted">No all-time cashflow entries yet.</p>
           )}
         </div>
       </Card>

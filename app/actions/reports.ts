@@ -14,7 +14,8 @@ import * as categoriesRepo from '@/lib/repositories/categories';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome, calculateSavingsTransfers } from '@/lib/finance/wealth';
 import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
-import { calculateTotalSpending, calculateSpendingByCategory } from '@/lib/finance/spending';
+import { calculateTotalSpending } from '@/lib/finance/spending';
+import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
 import { aggregateMonthly } from '@/lib/finance/monthly';
 
 export interface ApiResponse<T> {
@@ -29,12 +30,13 @@ export interface MonthlyReportData {
   spending: string;
   savings: string;
   wealthCreated: string;
-  categoryBreakdown: Array<{ category: string; amount: string; percentage: string }>;
+  categoryBreakdown: Array<{ category: string; amount: string; percentage: string; kind: 'income' | 'expense' }>;
   periodLabels: string[];
   trendIncome: string[];
   trendSpending: string[];
   trendSavings: string[];
   trendWealth: string[];
+  trendEndingCash: string[];
 }
 
 type LedgerEntryLike = {
@@ -52,9 +54,11 @@ export async function getMonthlyReport(
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    // Fetch periods that overlap with the month, then sort chronologically for chart display
+    // Fetch periods that overlap with the month for monthly totals.
     const periodsRaw = await periodsRepo.getPeriodsInRange(resolvedUserId, monthStart, monthEnd);
     const periods = periodsRaw.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    const recentPeriodsRaw = await periodsRepo.getRecentPeriods(resolvedUserId, 6);
+    const recentPeriods = [...recentPeriodsRaw].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
     
     const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
     const categoryMap = new Map<
@@ -76,34 +80,40 @@ export async function getMonthlyReport(
       ])
     );
 
-    const periodSummaries = await (async () => {
-      // Batch fetch: get all entries for all periods at once
-      const entriesByPeriod = new Map<string, (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[]>();
-      for (const period of periods) {
-        const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
-        entriesByPeriod.set(period.id, entries);
+    const entriesByPeriod = new Map<string, (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[]>();
+    for (const period of [...periods, ...recentPeriods]) {
+      if (entriesByPeriod.has(period.id)) {
+        continue;
       }
 
-      // Calculate summaries using pre-fetched entries
-      return periods.map((period: { id: string; startDate: Date }) => {
+      const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+      entriesByPeriod.set(period.id, entries);
+    }
+
+    const buildPeriodSummaries = (
+      sourcePeriods: Array<{ id: string; startDate: Date; label: string; openingCash: Decimal; closingCashActual: Decimal | null }>
+    ) => {
+      return sourcePeriods.map((period) => {
         const entries = entriesByPeriod.get(period.id) || [];
         const income = calculateIncome(entries);
         const spending = calculateTotalSpending(entries, categoryMap);
         const savings = calculateSavingsTransfers(entries, categoryMap);
+        const endingCash = period.closingCashActual ?? period.openingCash.plus(income).minus(spending).minus(savings);
+
         return {
-          label: period.startDate.toLocaleDateString('en-US', {
-            month: 'numeric',
-            day: 'numeric',
-            timeZone: 'UTC',
-          }),
+          label: period.label,
           income,
           spending,
           savings,
           wealth: income.minus(spending),
+          endingCash,
           entries,
         };
       });
-    })();
+    };
+
+    const periodSummaries = buildPeriodSummaries(periods);
+    const recentTrendSummaries = buildPeriodSummaries(recentPeriods);
 
     const totals = aggregateMonthly(
       periodSummaries.map((p: {
@@ -120,13 +130,14 @@ export async function getMonthlyReport(
     const allEntries = periodSummaries.flatMap(
       (p: { entries: unknown[] }) => p.entries
     ) as unknown as LedgerEntryLike[];
-    const spendingByCategory = calculateSpendingByCategory(allEntries as never, categoryMap);
+    const cashflowByCategory = calculateCashflowByCategory(allEntries as never, categoryMap);
 
-    const categoryBreakdown = spendingByCategory
-      .map((item: { categoryName: string; amount: Decimal; percentage: Decimal }) => ({
+    const categoryBreakdown = cashflowByCategory
+      .map((item: { categoryName: string; amount: Decimal; percentage: Decimal; kind: 'income' | 'expense' }) => ({
         category: item.categoryName,
         amount: item.amount.toFixed(2),
         percentage: `${item.percentage.toFixed(1)}%`,
+        kind: item.kind,
       }))
       .sort((a, b) => Number(b.amount) - Number(a.amount));
 
@@ -139,11 +150,12 @@ export async function getMonthlyReport(
         savings: totals.savings.toFixed(2),
         wealthCreated: totals.wealthCreated.toFixed(2),
         categoryBreakdown,
-        periodLabels: periodSummaries.map((p: { label: string }) => p.label),
-        trendIncome: periodSummaries.map((p: { income: Decimal }) => p.income.toFixed(2)),
-        trendSpending: periodSummaries.map((p: { spending: Decimal }) => p.spending.toFixed(2)),
-        trendSavings: periodSummaries.map((p: { savings: Decimal }) => p.savings.toFixed(2)),
-        trendWealth: periodSummaries.map((p: { wealth: Decimal }) => p.wealth.toFixed(2)),
+        periodLabels: recentTrendSummaries.map((p: { label: string }) => p.label),
+        trendIncome: recentTrendSummaries.map((p: { income: Decimal }) => p.income.toFixed(2)),
+        trendSpending: recentTrendSummaries.map((p: { spending: Decimal }) => p.spending.toFixed(2)),
+        trendSavings: recentTrendSummaries.map((p: { savings: Decimal }) => p.savings.toFixed(2)),
+        trendWealth: recentTrendSummaries.map((p: { wealth: Decimal }) => p.wealth.toFixed(2)),
+        trendEndingCash: recentTrendSummaries.map((p: { endingCash: Decimal }) => p.endingCash.toFixed(2)),
       },
     };
   } catch (error) {
