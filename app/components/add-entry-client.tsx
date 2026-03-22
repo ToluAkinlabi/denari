@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState, useTransition } from 'rea
 import { Card } from '@/components/card';
 import { Plus, ArrowUp, ArrowDown } from 'lucide-react';
 import { addQuickEntry, addTransaction, importBacklogEntries } from '@/app/actions/transactions';
+import { parseIsoDateString } from '@/lib/validators/schemas';
 
 interface AddEntryClientProps {
   periodId: string;
@@ -20,6 +21,32 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  const parseMonthAbbrevDate = (value: string) => {
+    const match = value.trim().match(/^(\d{1,2})-([A-Za-z]{3})$/);
+    if (!match) return new Date('invalid');
+
+    const [, dayText, monthText] = match;
+    const monthLookup: Record<string, number> = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+    };
+
+    const month = monthLookup[monthText.toLowerCase()];
+    if (month == null) return new Date('invalid');
+
+    return new Date(2026, month, Number(dayText));
   };
 
   const [tab, setTab] = useState<'quick' | 'detailed' | 'backlog'>('quick');
@@ -132,7 +159,11 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
 
       // Supports values like "9-Jan", "23-Jan", "2026-01-09"
       if (/^\d{1,2}-[A-Za-z]{3}$/.test(value)) {
-        return new Date(`${value}-2026`);
+        return parseMonthAbbrevDate(value);
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return parseIsoDateString(value) || new Date('invalid');
       }
 
       return new Date(value);
@@ -150,7 +181,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
         const [dateStr, categoryName, amount, description = '', note = '', entryType = ''] = parts;
 
         return {
-          date: new Date(dateStr),
+          date: parseIsoDateString(dateStr) || new Date(dateStr),
           categoryName,
           amount,
           description,

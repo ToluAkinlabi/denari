@@ -3,7 +3,7 @@
  * Biweekly pay period calculations and management
  */
 
-import { addDays, startOfDay, endOfDay } from 'date-fns';
+import { addDays, startOfDay } from 'date-fns';
 
 /**
  * First payday: January 9, 2026
@@ -37,7 +37,7 @@ export function getPayCycleIndex(date: Date): number {
  * Period 0 ends on FIRST_PAYDAY, so it starts 13 days before
  */
 export function getPeriodStartDate(cycleIndex: number): Date {
-  return addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS - (CYCLE_LENGTH_DAYS - 1));
+  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS - (CYCLE_LENGTH_DAYS - 1)));
 }
 
 /**
@@ -45,7 +45,7 @@ export function getPeriodStartDate(cycleIndex: number): Date {
  * Each period ends on a payday
  */
 export function getPeriodEndDate(cycleIndex: number): Date {
-  return addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS);
+  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
 }
 
 /**
