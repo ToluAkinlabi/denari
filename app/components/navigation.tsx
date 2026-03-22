@@ -8,7 +8,7 @@ import {
   PlusCircle,
   Settings,
   TrendingUp,
-  FlaskConical,
+  CalendarRange,
 } from 'lucide-react';
 
 export function Navigation() {
@@ -21,7 +21,7 @@ export function Navigation() {
     { href: '/transactions', icon: List, label: 'Transactions', mobile: true },
     { href: '/add', icon: PlusCircle, label: 'Add', mobile: true },
     { href: '/reports', icon: TrendingUp, label: 'Reports', mobile: true },
-    { href: '/scenarios', icon: FlaskConical, label: 'Scenarios', mobile: true },
+    { href: '/periods', icon: CalendarRange, label: 'Periods', mobile: true },
     { href: '/settings', icon: Settings, label: 'Settings', mobile: true },
   ];
 

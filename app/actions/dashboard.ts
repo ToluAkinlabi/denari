@@ -591,7 +591,7 @@ export async function getDashboardData(
       },
       wealthMetrics: {
         created: currentWealth.toFixed(2),
-        isNegative: currentWealth.isNegative(),
+        isNegative: currentCashEnding.isNegative(),
         savingsRate: savingsRate.toFixed(1) + '%',
         isSavingsHealthy: savingsHealthy,
         spendingPercentage: spendingPercent.toFixed(1) + '%',
