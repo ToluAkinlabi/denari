@@ -35,7 +35,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-screen-sm mx-auto px-4 py-6">
         <h1 className="text-3xl font-bold">Reports</h1>
         <p className="text-muted mt-2">Loading...</p>
       </div>
@@ -44,7 +44,7 @@ export default function ReportsPage() {
 
   if (!report.success || !report.data) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-screen-sm mx-auto px-4 py-6">
         <h1 className="text-3xl font-bold">Reports</h1>
         <p className="text-muted mt-2">{report.error ?? 'Could not load monthly report.'}</p>
       </div>
@@ -79,7 +79,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 pb-20">
+    <div className="max-w-screen-sm mx-auto px-4 py-6 pb-20">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Reports</h1>
@@ -118,10 +118,10 @@ export default function ReportsPage() {
               spending: Number(data.spending),
               savings: Number(data.savings),
             }]}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value}`} />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip formatter={(value) => `$${value}`} />
               <Legend />
               <Bar dataKey="income" fill="#10b981" name="Income" />
               <Bar dataKey="spending" fill="#ef4444" name="Spending" />
@@ -192,9 +192,9 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `$${value}`} />
+                    <XAxis dataKey="period" tick={{ fontSize: 9 }} interval={0} angle={-35} textAnchor="end" height={48} />
+                    <YAxis width={55} tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip formatter={(value) => `$${value}`} />
                   <Legend />
                   <Bar dataKey="income" fill="#10b981" name="Income" />
                   <Bar dataKey="spending" fill="#ef4444" name="Spending" />
@@ -208,9 +208,9 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `$${value}`} />
+                    <XAxis dataKey="period" tick={{ fontSize: 9 }} interval={0} angle={-35} textAnchor="end" height={48} />
+                    <YAxis width={55} tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip formatter={(value) => `$${value}`} />
                   <Legend />
                   <Line
                     type="monotone"

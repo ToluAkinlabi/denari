@@ -39,8 +39,8 @@ export function Navigation() {
             }`}
             title={label}
           >
-            <Icon size={24} />
-            <span className="text-xs mt-1 font-medium">{label.split('')[0]}</span>
+            <Icon size={22} />
+            <span className="text-[9px] mt-0.5 font-medium leading-tight truncate w-full text-center">{label}</span>
           </Link>
         ))}
       </div>

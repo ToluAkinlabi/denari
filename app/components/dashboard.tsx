@@ -49,7 +49,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
               <p className="text-sm text-muted mb-1">Cash Remaining</p>
               <p className="text-3xl font-bold text-green-600">${data.cashMetrics.ending}</p>
             </div>
-            <div className="text-4xl">💰</div>
+            <div className="text-4xl">&#x1F4B0;</div>
           </div>
         </Card>
 
@@ -71,7 +71,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
               <p className="text-3xl font-bold text-emerald-600">${data.cashMetrics.savings}</p>
               <p className="text-xs text-muted mt-1">{data.wealthMetrics.savingsRate} of income</p>
             </div>
-            <div className="text-4xl">🏦</div>
+            <div className="text-4xl">&#x1F3E6;</div>
           </div>
         </Card>
       </div>
@@ -113,18 +113,18 @@ export function DashboardContent({ data }: DashboardContentProps) {
               {carryForwardSign}${data.cashMetrics.opening}
             </p>
           </div>
-          <StatCard label="Period Income" value={`$${data.cashMetrics.income}`} icon="📥" />
+          <StatCard label="Period Income" value={`$${data.cashMetrics.income}`} icon="inbox" />
           <StatCard
             label="Total Expenses"
             value={`$${data.cashMetrics.spending}`}
             subtitle={`(${data.wealthMetrics.spendingPercentage} of income)`}
-            icon="📤"
+            icon="outbox"
           />
           <StatCard
             label="Period"
             value={`#${data.currentPeriod.index}`}
             subtitle={periodRange}
-            icon="📅"
+            icon="calendar"
           />
         </div>
       </Card>
@@ -195,7 +195,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
 
       <Card className="p-4 bg-gradient-to-br from-sky-50 dark:from-sky-950 to-transparent">
         <h3 className="text-sm font-semibold mb-3">
-          Next Period Forecast 
+          Next Period Forecast{' '}
           <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
             data.forecast.confidence === 'HIGH' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
             data.forecast.confidence === 'MEDIUM' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' :
@@ -205,41 +205,41 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </span>
         </h3>
         <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Income:</span>
-            <span className="font-medium">
-              ${data.forecast.income.min} - ${data.forecast.income.max}
+          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
+            <span className="text-muted shrink-0">Income:</span>
+            <span className="font-medium text-right">
+              ${data.forecast.income.min}&#x2013;${data.forecast.income.max}
               <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.income.likely})</span>
             </span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Expenses:</span>
-            <span className="font-medium">
-              ${data.forecast.spending.min} - ${data.forecast.spending.max}
+          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
+            <span className="text-muted shrink-0">Expenses:</span>
+            <span className="font-medium text-right">
+              ${data.forecast.spending.min}&#x2013;${data.forecast.spending.max}
               <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.spending.likely})</span>
             </span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted">Savings:</span>
-            <span className="font-medium">
-              ${data.forecast.savings.min} - ${data.forecast.savings.max}
+          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
+            <span className="text-muted shrink-0">Savings:</span>
+            <span className="font-medium text-right">
+              ${data.forecast.savings.min}&#x2013;${data.forecast.savings.max}
               <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.savings.likely})</span>
             </span>
           </div>
           {parseFloat(data.forecast.discretionaryBuffer.likely) > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted">Buffer (unknowns):</span>
-              <span className="font-medium text-amber-600 dark:text-amber-400">
+            <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
+              <span className="text-muted shrink-0">Buffer (unknowns):</span>
+              <span className="font-medium text-right text-amber-600 dark:text-amber-400">
                 ~${data.forecast.discretionaryBuffer.likely}
               </span>
             </div>
           )}
-          <div className="flex justify-between text-sm pt-2 border-t border-sky-200 dark:border-sky-800">
-            <span className="font-medium">Projected Cash:</span>
+          <div className="flex justify-between items-baseline gap-2 text-sm pt-2 border-t border-sky-200 dark:border-sky-800 flex-wrap">
+            <span className="font-medium shrink-0">Projected Cash:</span>
             <div className="text-right">
               <div className="font-bold">${data.forecast.endingCash.likely}</div>
               <div className="text-xs text-muted-foreground">
-                (${data.forecast.endingCash.min} - ${data.forecast.endingCash.max})
+                (${data.forecast.endingCash.min}&#x2013;${data.forecast.endingCash.max})
               </div>
             </div>
           </div>

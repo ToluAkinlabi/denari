@@ -184,7 +184,7 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-screen-sm mx-auto px-4 py-6">
         <h1 className="text-3xl font-bold">Transactions</h1>
         <p className="text-muted mt-2">Loading...</p>
       </div>
@@ -193,7 +193,7 @@ export default function TransactionsPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-screen-sm mx-auto px-4 py-6">
         <h1 className="text-3xl font-bold">Transactions</h1>
         <p className="text-red-600 mt-2">{error}</p>
       </div>
@@ -201,7 +201,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 pb-20">
+    <div className="max-w-screen-sm mx-auto px-4 py-6 pb-20">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Transactions</h1>
@@ -360,21 +360,9 @@ export default function TransactionsPage() {
                   >
                     Previous
                   </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-8 h-8 rounded-md text-sm transition-colors ${
-                          currentPage === page
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                  </div>
+                    <span className="flex items-center text-sm text-muted px-2">
+                      {currentPage}/{totalPages}
+                    </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
