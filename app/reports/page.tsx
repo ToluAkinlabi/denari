@@ -77,6 +77,11 @@ export default function ReportsPage() {
     income: ['bg-emerald-700', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-300'],
     expense: ['bg-red-600', 'bg-orange-500', 'bg-amber-500', 'bg-rose-400'],
   };
+  const chartAxisFont = 10;
+  const chartAxisMediumFont = 9;
+  const chartAxisSmallFont = 8;
+  const chartLegendFont = 11;
+  const chartTooltipStyle = { fontSize: '11px' };
 
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6 pb-20">
@@ -119,10 +124,10 @@ export default function ReportsPage() {
               savings: Number(data.savings),
             }]}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis width={55} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip formatter={(value) => `$${value}`} />
-              <Legend />
+                <XAxis dataKey="name" tick={{ fontSize: chartAxisFont }} />
+                <YAxis width={55} tick={{ fontSize: chartAxisFont }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip formatter={(value) => `$${value}`} contentStyle={chartTooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: chartLegendFont }} />
               <Bar dataKey="income" fill="#10b981" name="Income" />
               <Bar dataKey="spending" fill="#ef4444" name="Spending" />
               <Bar dataKey="savings" fill="#3b82f6" name="Savings" />
@@ -192,10 +197,10 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" tick={{ fontSize: 9 }} interval={0} angle={-35} textAnchor="end" height={48} />
-                    <YAxis width={55} tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip formatter={(value) => `$${value}`} />
-                  <Legend />
+                    <XAxis dataKey="period" tick={{ fontSize: chartAxisSmallFont }} interval={0} angle={-35} textAnchor="end" height={48} />
+                    <YAxis width={55} tick={{ fontSize: chartAxisMediumFont }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip formatter={(value) => `$${value}`} contentStyle={chartTooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: chartLegendFont }} />
                   <Bar dataKey="income" fill="#10b981" name="Income" />
                   <Bar dataKey="spending" fill="#ef4444" name="Spending" />
                   <Bar dataKey="savings" fill="#3b82f6" name="Savings" />
@@ -208,10 +213,10 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" tick={{ fontSize: 9 }} interval={0} angle={-35} textAnchor="end" height={48} />
-                    <YAxis width={55} tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
-                    <Tooltip formatter={(value) => `$${value}`} />
-                  <Legend />
+                    <XAxis dataKey="period" tick={{ fontSize: chartAxisSmallFont }} interval={0} angle={-35} textAnchor="end" height={48} />
+                    <YAxis width={55} tick={{ fontSize: chartAxisMediumFont }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip formatter={(value) => `$${value}`} contentStyle={chartTooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: chartLegendFont }} />
                   <Line
                     type="monotone"
                     dataKey="wealth"
