@@ -24,7 +24,7 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#232323] border-t border-[#3a3a3a] shadow-lg">
       <div className="grid grid-cols-5 max-w-screen-sm mx-auto">
         {navItems.map(({ href, icon: Icon, label }) => (
           <Link
@@ -34,7 +34,7 @@ export function Navigation() {
             className={`flex items-center justify-center py-4 px-2 mx-1 my-2 rounded-xl transition-all duration-200 ${
               isActive(href)
                 ? 'nav-tab-active scale-105'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                : 'text-gray-400 hover:text-gray-100'
             }`}
             title={label}
           >

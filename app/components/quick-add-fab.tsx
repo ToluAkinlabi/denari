@@ -149,9 +149,9 @@ export function QuickAddFab() {
               setActiveModal('quick');
               setEntryType('EXPENSE');
             }}
-            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-100 shadow-md"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-[#232323] px-3 py-2 text-xs font-semibold text-gray-100 shadow-md"
           >
-            <Zap size={14} className="text-amber-700 dark:text-amber-300" />
+            <Zap size={14} className="text-amber-300" />
             Quick Add
           </button>
           <button
@@ -160,9 +160,9 @@ export function QuickAddFab() {
               setLauncherOpen(false);
               setActiveModal('detailed');
             }}
-            className="inline-flex items-center gap-2 rounded-full border border-sky-300/70 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-100 shadow-md"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-[#232323] px-3 py-2 text-xs font-semibold text-gray-100 shadow-md"
           >
-            <SlidersHorizontal size={14} className="text-sky-700 dark:text-sky-300" />
+            <SlidersHorizontal size={14} className="text-amber-300" />
             Detailed Add
           </button>
         </div>
@@ -172,7 +172,7 @@ export function QuickAddFab() {
         type="button"
         aria-label="Open add options"
         onClick={() => setLauncherOpen((prev) => !prev)}
-        className="fixed right-5 bottom-24 z-[60] h-14 w-14 rounded-full text-white border border-amber-300/60 shadow-[0_14px_26px_-14px_rgba(245,158,11,0.9)] bg-gradient-to-br from-blue-700 to-slate-900 flex items-center justify-center active:scale-95"
+        className="fixed right-5 bottom-24 z-[60] h-14 w-14 rounded-full text-white border border-amber-300/60 shadow-[0_14px_26px_-14px_rgba(245,158,11,0.9)] bg-[#232323] flex items-center justify-center active:scale-95"
       >
         {launcherOpen ? <X size={22} /> : <Plus size={24} />}
       </button>
