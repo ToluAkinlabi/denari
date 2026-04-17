@@ -222,66 +222,46 @@ export function DashboardContent({ data }: DashboardContentProps) {
 
       <Card className="p-4 bg-gradient-to-br from-sky-50 dark:from-sky-950 to-transparent">
         <h3 className="text-sm font-semibold mb-3">
-          Next Period Forecast{' '}
+          Daily AI Briefing{' '}
           <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
             data.forecast.confidence === 'HIGH' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
             data.forecast.confidence === 'MEDIUM' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' :
             'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
           }`}>
-            {data.forecast.confidence}
+            {data.aiInsight.model.includes('claude') ? 'Claude' : data.aiInsight.model}
           </span>
         </h3>
-        <div className="space-y-2">
-          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
-            <span className="text-muted shrink-0">Income:</span>
-            <span className="font-medium text-right">
-              ${data.forecast.income.min}&#x2013;${data.forecast.income.max}
-              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.income.likely})</span>
-            </span>
-          </div>
-          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
-            <span className="text-muted shrink-0">Expenses:</span>
-            <span className="font-medium text-right">
-              ${data.forecast.spending.min}&#x2013;${data.forecast.spending.max}
-              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.spending.likely})</span>
-            </span>
-          </div>
-          <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
-            <span className="text-muted shrink-0">Savings:</span>
-            <span className="font-medium text-right">
-              ${data.forecast.savings.min}&#x2013;${data.forecast.savings.max}
-              <span className="text-xs text-muted-foreground ml-1">(~${data.forecast.savings.likely})</span>
-            </span>
-          </div>
-          {parseFloat(data.forecast.discretionaryBuffer.likely) > 0 && (
-            <div className="flex justify-between items-baseline gap-2 text-sm flex-wrap">
-              <span className="text-muted shrink-0">Buffer (unknowns):</span>
-              <span className="font-medium text-right text-amber-600 dark:text-amber-400">
-                ~${data.forecast.discretionaryBuffer.likely}
-              </span>
+        <div className="space-y-3">
+          <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+            {data.aiInsight.summary}
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+              <p className="text-muted">Income</p>
+              <p className="font-semibold text-emerald-600">${data.cashMetrics.income}</p>
             </div>
-          )}
-          <div className="flex justify-between items-baseline gap-2 text-sm pt-2 border-t border-sky-200 dark:border-sky-800 flex-wrap">
-            <span className="font-medium shrink-0">Projected Cash:</span>
-            <div className="text-right">
-              <div className="font-bold">${data.forecast.endingCash.likely}</div>
-              <div className="text-xs text-muted-foreground">
-                (${data.forecast.endingCash.min}&#x2013;${data.forecast.endingCash.max})
-              </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+              <p className="text-muted">Spending</p>
+              <p className="font-semibold text-red-600">${data.cashMetrics.spending}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+              <p className="text-muted">Savings</p>
+              <p className="font-semibold text-sky-600">${data.cashMetrics.savings}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+              <p className="text-muted">Next Cash (Likely)</p>
+              <p className="font-semibold text-blue-700 dark:text-blue-300">${data.forecast.nextEndingCash}</p>
             </div>
           </div>
+
           {data.forecast.warnings.length > 0 && (
-            <ul className="pt-2 text-xs space-y-1">
-              {data.forecast.warnings.slice(0, 3).map((warning) => (
-                <li key={warning} className={
-                  warning.includes('🚨') ? 'text-red-700 dark:text-red-400 font-medium' :
-                  'text-amber-700 dark:text-amber-400'
-                }>
-                  {warning}
-                </li>
-              ))}
-            </ul>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              {data.forecast.warnings.length} caution flag{data.forecast.warnings.length === 1 ? '' : 's'} in projection.
+            </p>
           )}
+
+          <p className="text-[10px] text-muted">Updated {new Date(data.aiInsight.generatedAt).toLocaleString()}</p>
         </div>
       </Card>
     </div>

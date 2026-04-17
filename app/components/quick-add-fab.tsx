@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Zap, SlidersHorizontal } from 'lucide-react';
 import { addTransaction, getAddEntryOptions } from '@/app/actions/transactions';
 
 type QuickCategory = {
@@ -21,7 +21,8 @@ function formatDateInput(value: Date) {
 export function QuickAddFab() {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<'quick' | 'detailed' | null>(null);
   const [entryType, setEntryType] = useState<'INCOME' | 'EXPENSE' | 'SAVINGS'>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +43,7 @@ export function QuickAddFab() {
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!activeModal) return;
 
     let cancelled = false;
     startTransition(async () => {
@@ -64,7 +65,7 @@ export function QuickAddFab() {
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [activeModal]);
 
   useEffect(() => {
     if (!filteredCategories.length) {
@@ -79,7 +80,8 @@ export function QuickAddFab() {
   if (shouldHide) return null;
 
   const resetAndClose = () => {
-    setOpen(false);
+    setActiveModal(null);
+    setLauncherOpen(false);
     setAmount('');
     setDescription('');
     setEntryType('EXPENSE');
@@ -138,16 +140,44 @@ export function QuickAddFab() {
         </div>
       )}
 
+      {launcherOpen && (
+        <div className="fixed right-5 bottom-40 z-[65] flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setLauncherOpen(false);
+              setActiveModal('quick');
+              setEntryType('EXPENSE');
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300/70 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-100 shadow-md"
+          >
+            <Zap size={14} className="text-amber-700 dark:text-amber-300" />
+            Quick Add
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setLauncherOpen(false);
+              setActiveModal('detailed');
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-sky-300/70 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-800 dark:text-gray-100 shadow-md"
+          >
+            <SlidersHorizontal size={14} className="text-sky-700 dark:text-sky-300" />
+            Detailed Add
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
-        aria-label="Quick add entry"
-        onClick={() => setOpen(true)}
+        aria-label="Open add options"
+        onClick={() => setLauncherOpen((prev) => !prev)}
         className="fixed right-5 bottom-24 z-[60] h-14 w-14 rounded-full text-white border border-amber-300/60 shadow-[0_14px_26px_-14px_rgba(245,158,11,0.9)] bg-gradient-to-br from-blue-700 to-slate-900 flex items-center justify-center active:scale-95"
       >
-        <Plus size={24} />
+        {launcherOpen ? <X size={22} /> : <Plus size={24} />}
       </button>
 
-      {open && (
+      {activeModal && (
         <div className="fixed inset-0 z-[80]">
           <button
             type="button"
@@ -158,7 +188,7 @@ export function QuickAddFab() {
 
           <div className="absolute inset-x-0 bottom-0 max-w-screen-sm mx-auto rounded-t-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 pb-6 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold">Quick Add</h3>
+              <h3 className="text-base font-semibold">{activeModal === 'quick' ? 'Quick Add' : 'Detailed Add'}</h3>
               <button
                 type="button"
                 aria-label="Close quick add panel"
@@ -171,28 +201,30 @@ export function QuickAddFab() {
             </div>
 
             <form onSubmit={onSubmit} className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
-                {(['EXPENSE', 'INCOME', 'SAVINGS'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setEntryType(type)}
-                    className={`rounded-lg py-2 text-xs font-semibold border transition-colors ${
-                      entryType === type
-                        ? type === 'INCOME'
-                          ? 'bg-emerald-600 text-white border-emerald-500'
-                          : type === 'SAVINGS'
-                          ? 'bg-sky-600 text-white border-sky-500'
-                          : 'bg-amber-600 text-white border-amber-500'
-                        : 'bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {type === 'EXPENSE' ? 'Expense' : type === 'INCOME' ? 'Income' : 'Savings'}
-                  </button>
-                ))}
-              </div>
+              {activeModal === 'detailed' && (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['EXPENSE', 'INCOME', 'SAVINGS'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setEntryType(type)}
+                      className={`rounded-lg py-2 text-xs font-semibold border transition-colors ${
+                        entryType === type
+                          ? type === 'INCOME'
+                            ? 'bg-emerald-600 text-white border-emerald-500'
+                            : type === 'SAVINGS'
+                            ? 'bg-sky-600 text-white border-sky-500'
+                            : 'bg-amber-700 text-white border-amber-600'
+                          : 'bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {type === 'EXPENSE' ? 'Expense' : type === 'INCOME' ? 'Income' : 'Savings'}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${activeModal === 'detailed' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -204,14 +236,16 @@ export function QuickAddFab() {
                   className="input-field"
                   required
                 />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  aria-label="Entry date"
-                  title="Entry date"
-                  className="input-field"
-                />
+                {activeModal === 'detailed' && (
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    aria-label="Entry date"
+                    title="Entry date"
+                    className="input-field"
+                  />
+                )}
               </div>
 
               <select
@@ -253,7 +287,7 @@ export function QuickAddFab() {
                   disabled={isPending}
                   className="btn-primary flex-1"
                 >
-                  {isPending ? 'Saving...' : 'Save'}
+                  {isPending ? 'Saving...' : activeModal === 'quick' ? 'Save Quick Entry' : 'Save Detailed Entry'}
                 </button>
               </div>
             </form>

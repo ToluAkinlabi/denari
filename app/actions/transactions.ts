@@ -7,7 +7,7 @@
 
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
 import type { CategoryGroup, CategoryType, ForecastStrategy } from '@prisma/client';
 import { startOfDay, endOfDay } from 'date-fns';
@@ -38,6 +38,10 @@ export interface ApiResponse<T> {
 
 function toLedgerEntryType(type: 'INCOME' | 'EXPENSE' | 'SAVINGS') {
   return type === 'SAVINGS' ? 'TRANSFER' : type;
+}
+
+function revalidateAiInsight(userId: string) {
+  revalidateTag(`daily-ai-insight:${userId}`);
 }
 
 async function resolveUserId(userId?: string) {
@@ -388,6 +392,7 @@ export async function addQuickEntry(
 
     revalidatePath('/');
     revalidatePath('/transactions');
+    revalidateAiInsight(userId);
     return {
       success: true,
       data: {
@@ -507,6 +512,7 @@ export async function addTransaction(
 
     revalidatePath('/');
     revalidatePath('/transactions');
+    revalidateAiInsight(userId);
     return {
       success: true,
       data: {
@@ -628,6 +634,7 @@ export async function importBacklogEntries(
 
     // Revalidate to refresh the dashboard
     revalidatePath('/');
+    revalidateAiInsight(userId);
 
     return {
       success: true,
@@ -787,6 +794,7 @@ export async function addSummaryEntry(
     }
 
     revalidatePath('/');
+    revalidateAiInsight(userId);
     return {
       success: true,
       data: {
@@ -837,6 +845,7 @@ export async function deleteTransaction(
 
     revalidatePath('/');
     revalidatePath('/transactions');
+    revalidateAiInsight(resolvedUserId);
     return {
       success: true,
     };
@@ -918,6 +927,7 @@ export async function updateTransaction(
 
     revalidatePath('/');
     revalidatePath('/transactions');
+    revalidateAiInsight(resolvedUserId);
     return {
       success: true,
       data: { id: updated.id },

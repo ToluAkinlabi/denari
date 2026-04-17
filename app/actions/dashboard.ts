@@ -42,6 +42,7 @@ import {
 import { forecastNextPeriod, getForecastWarnings } from '@/lib/finance/forecast';
 import { forecastNextPeriodEnhanced, type CategoryForecast } from '@/lib/finance/forecast-enhanced';
 import { buildCategoryHistory, buildSavingsHistory } from '@/lib/finance/forecast-builder';
+import { getDailyInsight } from '@/lib/ai/daily-insight';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -124,6 +125,11 @@ export interface DashboardData {
     nextEndingCash: string;
     warnings: string[];
     categoryBreakdown?: CategoryForecast[];
+  };
+  aiInsight: {
+    summary: string;
+    model: string;
+    generatedAt: string;
   };
   comparison?: {
     type: 'PREVIOUS' | 'AVERAGE';
@@ -571,6 +577,24 @@ export async function getDashboardData(
       };
     }
 
+    const aiInsight = await getDailyInsight(resolvedUserId, {
+      income: currentIncome.toFixed(2),
+      spending: currentSpending.toFixed(2),
+      savings: currentSavings.toFixed(2),
+      wealthCreated: currentWealth.toFixed(2),
+      endingCash: currentCashEnding.toFixed(2),
+      spendingPercent: spendingPercent.toFixed(1) + '%',
+      savingsRate: savingsRate.toFixed(1) + '%',
+      paceStatus,
+      periodDay: paceMetrics.day,
+      totalDays: paceMetrics.totalDays,
+      forecastIncome: forecast.nextIncome,
+      forecastSpending: forecast.nextSpending,
+      forecastSavings: forecast.nextSavings,
+      forecastEndingCash: forecast.nextEndingCash,
+      forecastWarnings: forecast.warnings,
+    });
+
     const dashboardData: DashboardData = {
       currentPeriod: {
         id: currentPeriod.id,
@@ -613,6 +637,7 @@ export async function getDashboardData(
         categoryDiscipline: categoryDiscipline.toFixed(1),
       },
       forecast,
+      aiInsight,
       comparison,
     };
 
