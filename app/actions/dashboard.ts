@@ -371,6 +371,18 @@ export async function getDashboardData(
       return { income, spending, savings, wealth };
     });
 
+    const recentWindow = recentData.slice(0, 3);
+    const recentCount = recentWindow.length || 1;
+    const avgRecentIncome = recentWindow
+      .reduce((sum, item) => sum.plus(item.income), new Decimal(0))
+      .dividedBy(recentCount);
+    const avgRecentSpending = recentWindow
+      .reduce((sum, item) => sum.plus(item.spending), new Decimal(0))
+      .dividedBy(recentCount);
+    const avgRecentSavings = recentWindow
+      .reduce((sum, item) => sum.plus(item.savings), new Decimal(0))
+      .dividedBy(recentCount);
+
     const savingsDiscipline = evaluateSavingsDiscipline(currentIncome, currentSavings);
     const expenseControl = evaluateExpenseControl(currentIncome, currentSpending);
     const miscLeakage = evaluateMiscLeakage(
@@ -526,6 +538,29 @@ export async function getDashboardData(
       }
     }
 
+    const partnershipContribution = currentEntries
+      .filter((entry) => {
+        if (!entry.categoryId) return false;
+        const category = categoryMap.get(entry.categoryId);
+        return Boolean(
+          category &&
+          category.name.toLowerCase().includes('partnership') &&
+          (category.countsAsExpense || category.countsAsSavings)
+        );
+      })
+      .reduce((sum, entry) => sum.plus(new Decimal(String(entry.amount))), new Decimal(0));
+
+    const scenarioExtraSpend = new Decimal(Math.max(25, Number(currentSpending.times(0.08).toFixed(2))));
+    const scenarioSkipSavings = currentSavings.greaterThan(0)
+      ? new Decimal(Math.max(20, Number(currentSavings.times(0.5).toFixed(2))))
+      : new Decimal(0);
+    const scenarioSkipPartnership = partnershipContribution.greaterThan(0)
+      ? new Decimal(Math.max(20, Number(partnershipContribution.times(0.5).toFixed(2))))
+      : new Decimal(0);
+    const forecastLikelyCash = new Decimal(forecast.nextEndingCash || '0');
+    const scenarioRiskCash = forecastLikelyCash.minus(scenarioExtraSpend);
+    const scenarioLiquidityCash = forecastLikelyCash.plus(scenarioSkipSavings).plus(scenarioSkipPartnership);
+
     // Comparison
     let comparison: DashboardData['comparison'] | undefined;
 
@@ -593,6 +628,14 @@ export async function getDashboardData(
       forecastSavings: forecast.nextSavings,
       forecastEndingCash: forecast.nextEndingCash,
       forecastWarnings: forecast.warnings,
+      avgRecentIncome: avgRecentIncome.toFixed(2),
+      avgRecentSpending: avgRecentSpending.toFixed(2),
+      avgRecentSavings: avgRecentSavings.toFixed(2),
+      scenarioExtraSpend: scenarioExtraSpend.toFixed(2),
+      scenarioSkipSavings: scenarioSkipSavings.toFixed(2),
+      scenarioSkipPartnership: scenarioSkipPartnership.toFixed(2),
+      scenarioRiskCash: scenarioRiskCash.toFixed(2),
+      scenarioLiquidityCash: scenarioLiquidityCash.toFixed(2),
     });
 
     const dashboardData: DashboardData = {

@@ -274,18 +274,11 @@ export function QuickAddFab() {
 
               {error && <p className="text-xs text-red-600">{error}</p>}
 
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => router.push('/add')}
-                  className="btn-secondary flex-1"
-                >
-                  Full Form
-                </button>
+              <div className="pt-1">
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="btn-primary flex-1"
+                  className="btn-primary w-full"
                 >
                   {isPending ? 'Saving...' : activeModal === 'quick' ? 'Save Quick Entry' : 'Save Detailed Entry'}
                 </button>

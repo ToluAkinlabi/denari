@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0ea5e9" />
@@ -33,7 +33,7 @@ export default function RootLayout({
         <link rel="icon" href="/icon.svg" />
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
-      <body className="bg-app-atmosphere text-gray-900 dark:text-gray-50">
+      <body className="bg-app-atmosphere text-gray-50">
         <Providers>
           <DevSwGuard />
           <div className="min-h-screen flex flex-col">

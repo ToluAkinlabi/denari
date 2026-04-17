@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --brand-blue-500: #1d4ed8;
-  --brand-blue-700: #1e3a8a;
-  --brand-blue-900: #0f172a;
+  --brand-blue-500: #334155;
+  --brand-blue-700: #1f2937;
+  --brand-blue-900: #111827;
   --brand-gold-400: #fbbf24;
   --brand-gold-500: #f59e0b;
-  --brand-gold-700: #92400e;
+  --brand-gold-700: #b45309;
 }
 
 @layer base {
@@ -118,22 +118,22 @@
 
   .bg-app-atmosphere {
     background:
-      radial-gradient(1200px 600px at 10% -20%, rgba(14, 165, 233, 0.16), transparent 55%),
-      radial-gradient(900px 500px at 95% 0%, rgba(245, 158, 11, 0.14), transparent 52%),
-      linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 1) 100%);
+      radial-gradient(1200px 620px at 12% -22%, rgba(180, 83, 9, 0.22), transparent 56%),
+      radial-gradient(950px 560px at 95% 2%, rgba(250, 204, 21, 0.12), transparent 54%),
+      linear-gradient(180deg, rgba(17, 24, 39, 1) 0%, rgba(15, 23, 42, 1) 100%);
   }
 
   .dark .bg-app-atmosphere {
     background:
-      radial-gradient(1200px 650px at 15% -25%, rgba(14, 165, 233, 0.2), transparent 55%),
-      radial-gradient(900px 540px at 92% 2%, rgba(245, 158, 11, 0.15), transparent 50%),
-      linear-gradient(180deg, rgba(3, 7, 18, 1) 0%, rgba(2, 6, 23, 1) 100%);
+      radial-gradient(1200px 680px at 15% -26%, rgba(180, 83, 9, 0.26), transparent 56%),
+      radial-gradient(900px 560px at 92% 2%, rgba(250, 204, 21, 0.14), transparent 50%),
+      linear-gradient(180deg, rgba(10, 10, 11, 1) 0%, rgba(17, 24, 39, 1) 100%);
   }
 
   .nav-tab-active {
-    color: var(--brand-gold-700);
-    background-color: rgba(255, 247, 237, 0.95);
-    box-shadow: inset 0 0 0 1px rgba(146, 64, 14, 0.3);
+    color: #fcd34d;
+    background-color: rgba(31, 41, 55, 0.95);
+    box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35);
   }
 
   .dark .nav-tab-active {

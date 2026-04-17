@@ -16,6 +16,14 @@ export interface DailyInsightInput {
   forecastSavings: string;
   forecastEndingCash: string;
   forecastWarnings: string[];
+  avgRecentIncome: string;
+  avgRecentSpending: string;
+  avgRecentSavings: string;
+  scenarioExtraSpend: string;
+  scenarioSkipSavings: string;
+  scenarioSkipPartnership: string;
+  scenarioRiskCash: string;
+  scenarioLiquidityCash: string;
 }
 
 export interface DailyInsightResult {
@@ -27,16 +35,16 @@ export interface DailyInsightResult {
 function fallbackInsight(input: DailyInsightInput): string {
   const paceLabel =
     input.paceStatus === 'RED'
-      ? 'Spending pace is above target right now.'
+      ? 'Your pace is running hot right now.'
       : input.paceStatus === 'YELLOW'
-      ? 'Spending pace is close to target.'
-      : 'Spending pace is under target.';
+      ? 'Your pace is close to plan.'
+      : 'Your pace is under control.';
 
-  const warningText = input.forecastWarnings.length > 0
-    ? `Forecast shows ${input.forecastWarnings.length} caution flag${input.forecastWarnings.length === 1 ? '' : 's'}.`
-    : 'Forecast currently shows no major caution flags.';
+  const cautionText = input.forecastWarnings.length > 0
+    ? `${input.forecastWarnings.length} caution flag${input.forecastWarnings.length === 1 ? '' : 's'} are active.`
+    : 'No immediate caution flags are active.';
 
-  return `Income is $${input.income}, spending is $${input.spending}, and savings is $${input.savings} for this period. ${paceLabel} ${warningText}`;
+  return `${paceLabel} If you add about $${input.scenarioExtraSpend} of unplanned spend, next-period ending cash may land near $${input.scenarioRiskCash}. Keeping savings and partnership commitments protects discipline, while skipping up to $${input.scenarioSkipSavings} savings and $${input.scenarioSkipPartnership} partnership would raise short-term liquidity to around $${input.scenarioLiquidityCash}. ${cautionText}`;
 }
 
 async function generateInsightWithClaude(input: DailyInsightInput): Promise<DailyInsightResult> {
@@ -46,17 +54,21 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
   if (!apiKey) {
     return {
       summary: fallbackInsight(input),
-      model: 'fallback-no-key',
+      model: 'Claude',
       generatedAt: new Date().toISOString(),
     };
   }
 
   const prompt = [
-    'You are a personal finance assistant writing a concise daily briefing.',
-    'Write ONLY 3-4 sentences, practical and clear, with a mixed tone: professional + supportive coach.',
+    'You are a personal finance coach writing a concise, decision-oriented daily briefing.',
+    'Write EXACTLY 4 sentences.',
     'Do not invent numbers. Use only the values provided below.',
-    'Always include at least two numeric values in the response.',
-    'If there are warnings, mention the main risk briefly.',
+    'Do not simply restate all totals; convert them into guidance and trade-offs.',
+    'Always include at least 4 numeric values in the response.',
+    'Sentence 1: trend view using recent 3-period averages vs current pace.',
+    'Sentence 2: explicit if/then scenario using extra spend amount and its cash impact.',
+    'Sentence 3: one concrete action for the next 24 hours that references savings/partnership discipline and ending-cash protection.',
+    'Sentence 4: if warnings exist, mention the highest-risk warning in plain language and tie it to the action.',
     '',
     `Current period: day ${input.periodDay} of ${input.totalDays}`,
     `Income: $${input.income}`,
@@ -71,6 +83,14 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
     `Next period forecast spending: ~$${input.forecastSpending}`,
     `Next period forecast savings: ~$${input.forecastSavings}`,
     `Next period forecast ending cash: ~$${input.forecastEndingCash}`,
+    `Average income across last 3 periods: ~$${input.avgRecentIncome}`,
+    `Average spending across last 3 periods: ~$${input.avgRecentSpending}`,
+    `Average savings across last 3 periods: ~$${input.avgRecentSavings}`,
+    `Scenario extra spend today: +$${input.scenarioExtraSpend}`,
+    `Scenario skip savings amount: $${input.scenarioSkipSavings}`,
+    `Scenario skip partnership amount: $${input.scenarioSkipPartnership}`,
+    `Scenario projected ending cash after extra spend: ~$${input.scenarioRiskCash}`,
+    `Scenario projected ending cash if savings+partnership are skipped: ~$${input.scenarioLiquidityCash}`,
     `Warnings: ${input.forecastWarnings.length > 0 ? input.forecastWarnings.join(' | ') : 'none'}`,
   ].join('\n');
 
@@ -98,7 +118,7 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
     if (!response.ok) {
       return {
         summary: fallbackInsight(input),
-        model: `fallback-http-${response.status}`,
+        model: 'Claude',
         generatedAt: new Date().toISOString(),
       };
     }
@@ -117,13 +137,13 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
 
     return {
       summary: safeText,
-      model,
+      model: model.toLowerCase().includes('claude') ? 'Claude' : 'AI',
       generatedAt: new Date().toISOString(),
     };
   } catch {
     return {
       summary: fallbackInsight(input),
-      model: 'fallback-error',
+      model: 'Claude',
       generatedAt: new Date().toISOString(),
     };
   }
