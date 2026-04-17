@@ -186,7 +186,7 @@ export function QuickAddFab() {
             onClick={resetAndClose}
           />
 
-          <div className="absolute inset-x-0 bottom-0 max-w-screen-sm mx-auto rounded-t-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 pb-6 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-w-screen-sm mx-auto rounded-t-2xl border border-[#3a3a3a] bg-[#232323] p-4 pb-6 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold">{activeModal === 'quick' ? 'Quick Add' : 'Detailed Add'}</h3>
               <button
@@ -194,7 +194,7 @@ export function QuickAddFab() {
                 aria-label="Close quick add panel"
                 title="Close quick add panel"
                 onClick={resetAndClose}
-                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-2 rounded-lg text-gray-300 hover:bg-[#2a2a2a]"
               >
                 <X size={18} />
               </button>
@@ -213,9 +213,9 @@ export function QuickAddFab() {
                           ? type === 'INCOME'
                             ? 'bg-emerald-600 text-white border-emerald-500'
                             : type === 'SAVINGS'
-                            ? 'bg-sky-600 text-white border-sky-500'
+                            ? 'bg-amber-600 text-white border-amber-500'
                             : 'bg-amber-700 text-white border-amber-600'
-                          : 'bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                          : 'bg-[#2a2a2a] border-[#4a4a4a] text-gray-300'
                       }`}
                     >
                       {type === 'EXPENSE' ? 'Expense' : type === 'INCOME' ? 'Income' : 'Savings'}
