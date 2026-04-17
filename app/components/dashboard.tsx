@@ -192,8 +192,8 @@ export function DashboardContent({ data }: DashboardContentProps) {
                 <p className="text-sm font-medium">{item.emoji ? `${item.emoji} ` : ''}{item.name}</p>
                 <p className="text-xs text-muted">{item.percentage}</p>
               </div>
-              <p className={`text-sm font-semibold ${item.kind === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                {item.kind === 'income' ? '+' : '-'}${item.amount}
+                <p className={`text-sm font-semibold ${item.kind === 'income' ? 'text-emerald-600' : item.kind === 'savings' ? 'text-sky-600' : 'text-red-600'}`}>
+                  {item.kind === 'expense' ? '-' : '+'}${item.amount}
               </p>
             </div>
           ))}

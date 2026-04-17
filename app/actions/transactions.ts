@@ -163,13 +163,8 @@ async function inferEntryForecastMetadata(input: {
  * Creates essential categories if none exist
  */
 async function ensureDefaultCategories(userId: string) {
-  const existing = await categoriesRepo.getCategoriesForUser(userId);
-  if (existing.length > 0) {
-    return existing;
-  }
-
-  // Create essential default categories
-  const defaultCategories: Array<{
+  // Baseline categories that should always exist for every user.
+  const baselineCategories: Array<{
     name: string;
     type: CategoryType;
     group: CategoryGroup;
@@ -190,18 +185,27 @@ async function ensureDefaultCategories(userId: string) {
     { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: true },
     { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
     { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', countsAsExpense: false, countsAsSavings: true, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
   ];
 
-  const created = await Promise.all(
-    defaultCategories.map((cat) =>
-      categoriesRepo.createCategory({
-        userId,
-        ...cat,
-      })
-    )
+  const existing = await categoriesRepo.getCategoriesForUser(userId);
+  const existingNames = new Set(existing.map((c) => c.name.toLowerCase()));
+  const missingCategories = baselineCategories.filter(
+    (cat) => !existingNames.has(cat.name.toLowerCase())
   );
 
-  return created;
+  if (missingCategories.length > 0) {
+    await Promise.all(
+      missingCategories.map((cat) =>
+        categoriesRepo.createCategory({
+          userId,
+          ...cat,
+        })
+      )
+    );
+  }
+
+  return categoriesRepo.getCategoriesForUser(userId);
 }
 
 export async function getAddEntryOptions(

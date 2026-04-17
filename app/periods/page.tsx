@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@/components/card';
-import { getRecentPeriods, reconcilePeriod } from '@/app/actions/periods';
+import { getRecentPeriods, reconcilePeriod, unreconcilePeriod } from '@/app/actions/periods';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -115,6 +115,7 @@ export default function PeriodsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -173,6 +174,7 @@ export default function PeriodsPage() {
         <div className="space-y-3">
           {data.items.map((period) => {
             const isOpen = reconcilingId === period.id;
+            const isReopening = reopeningId === period.id;
             const diff = period.closingCashActual != null
               ? parseFloat(period.closingCashActual) - parseFloat(period.closingCashExpected)
               : null;
@@ -189,6 +191,29 @@ export default function PeriodsPage() {
                         className="text-xs px-2 py-1 rounded-full border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       >
                         {isOpen ? 'Cancel' : 'Reconcile'}
+                      </button>
+                    )}
+                    {period.isReconciled && (
+                      <button
+                        onClick={async () => {
+                          const confirmed = window.confirm('Reopen this reconciled period? This will remove its anchored actual closing cash and recalculate carry-forward balances.');
+                          if (!confirmed) return;
+
+                          setReopeningId(period.id);
+                          const response = await unreconcilePeriod({ periodId: period.id });
+                          setReopeningId(null);
+
+                          if (!response.success) {
+                            setError(response.error ?? 'Could not reopen period.');
+                            return;
+                          }
+
+                          await load();
+                        }}
+                        disabled={isReopening}
+                        className="text-xs px-2 py-1 rounded-full border border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-60"
+                      >
+                        {isReopening ? 'Reopening…' : 'Reopen'}
                       </button>
                     )}
                     <span

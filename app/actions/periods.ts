@@ -157,6 +157,58 @@ export async function reconcilePeriod(
 }
 
 /**
+ * Reopen a reconciled period.
+ *
+ * Clears anchored actual closing cash and sets status back to OPEN,
+ * then re-runs cascade balance calculations for all periods.
+ */
+export async function unreconcilePeriod(
+  input: unknown,
+  userId?: string
+): Promise<ApiResponse<{ reopened: boolean }>> {
+  try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
+
+    if (
+      typeof input !== 'object' ||
+      input === null ||
+      !('periodId' in input) ||
+      typeof (input as { periodId?: unknown }).periodId !== 'string' ||
+      (input as { periodId: string }).periodId.trim().length === 0
+    ) {
+      return { success: false, error: 'Invalid period id' };
+    }
+
+    const periodId = (input as { periodId: string }).periodId;
+    const period = await periodsRepo.getPeriodById(periodId);
+
+    if (!period) {
+      return { success: false, error: 'Period not found' };
+    }
+
+    if (period.userId !== resolvedUserId) {
+      return { success: false, error: 'Unauthorized period access' };
+    }
+
+    if (period.status !== 'RECONCILED') {
+      return { success: true, data: { reopened: false } };
+    }
+
+    await periodsRepo.updatePeriod(periodId, {
+      status: 'OPEN',
+      closingCashActual: null,
+    });
+
+    await cascadeRecalculateAllPeriods(resolvedUserId);
+
+    return { success: true, data: { reopened: true } };
+  } catch (error) {
+    console.error('unreconcilePeriod error:', error);
+    return { success: false, error: `Server error: ${(error as Error).message}` };
+  }
+}
+
+/**
  * Update period opening cash
  *
  * Adjusts opening balance for a period.

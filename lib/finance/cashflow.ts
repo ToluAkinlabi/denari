@@ -10,7 +10,7 @@ export function calculateCashflowByCategory(
   entries: LedgerEntryLike[],
   categoryMap: Map<
     string,
-    { name: string; countsAsExpense: boolean }
+    { name: string; countsAsExpense: boolean; countsAsSavings?: boolean }
   >
 ): Array<{
   categoryId: string;
@@ -18,7 +18,7 @@ export function calculateCashflowByCategory(
   amount: Decimal;
   count: number;
   percentage: Decimal;
-  kind: 'income' | 'expense';
+  kind: 'income' | 'expense' | 'savings';
 }> {
   const breakdown = new Map<
     string,
@@ -27,16 +27,18 @@ export function calculateCashflowByCategory(
       categoryName: string;
       amount: Decimal;
       count: number;
-      kind: 'income' | 'expense';
+      kind: 'income' | 'expense' | 'savings';
     }
   >();
 
   entries.forEach((entry) => {
     const category = categoryMap.get(entry.categoryId);
 
-    let kind: 'income' | 'expense' | null = null;
+    let kind: 'income' | 'expense' | 'savings' | null = null;
     if (entry.entryType === 'INCOME') {
       kind = 'income';
+    } else if (category?.countsAsSavings) {
+      kind = 'savings';
     } else if (category?.countsAsExpense) {
       kind = 'expense';
     }
@@ -69,6 +71,7 @@ export function calculateCashflowByCategory(
     {
       income: new Decimal(0),
       expense: new Decimal(0),
+      savings: new Decimal(0),
     }
   );
 
@@ -85,7 +88,12 @@ export function calculateCashflowByCategory(
     }))
     .sort((a, b) => {
       if (a.kind !== b.kind) {
-        return a.kind === 'income' ? -1 : 1;
+        const order: Record<'income' | 'expense' | 'savings', number> = {
+          income: 0,
+          expense: 1,
+          savings: 2,
+        };
+        return order[a.kind] - order[b.kind];
       }
 
       return b.amount.comparedTo(a.amount);

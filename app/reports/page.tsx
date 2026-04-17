@@ -72,10 +72,12 @@ export default function ReportsPage() {
   const pieColorClasses = {
     income: ['fill-emerald-700', 'fill-emerald-500', 'fill-emerald-400', 'fill-emerald-300'],
     expense: ['fill-red-600', 'fill-orange-500', 'fill-amber-500', 'fill-rose-400'],
+    savings: ['fill-sky-700', 'fill-sky-500', 'fill-cyan-500', 'fill-blue-400'],
   };
   const dotColorClasses = {
     income: ['bg-emerald-700', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-300'],
     expense: ['bg-red-600', 'bg-orange-500', 'bg-amber-500', 'bg-rose-400'],
+    savings: ['bg-sky-700', 'bg-sky-500', 'bg-cyan-500', 'bg-blue-400'],
   };
   const chartAxisFont = 10;
   const chartAxisMediumFont = 9;
@@ -136,7 +138,7 @@ export default function ReportsPage() {
         </Card>
 
         <Card className="p-4">
-          <h3 className="font-semibold mb-4">Income vs Expense Mix</h3>
+          <h3 className="font-semibold mb-4">Income, Expense & Wealth Mix</h3>
           <div className="grid gap-6 md:grid-cols-[minmax(0,320px)_1fr] items-center">
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -173,17 +175,17 @@ export default function ReportsPage() {
                     <div>
                       <p className="text-sm font-medium">{category.name}</p>
                       <p className="text-xs text-muted">
-                        {category.kind === 'income' ? 'Income' : 'Expense'} • {category.percentage}
+                        {category.kind === 'income' ? 'Income' : category.kind === 'savings' ? 'Wealth' : 'Expense'} • {category.percentage}
                       </p>
                     </div>
                   </div>
-                  <p className={`text-sm font-semibold ${category.kind === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {category.kind === 'income' ? '+' : '-'}${category.amount.toFixed(2)}
+                  <p className={`text-sm font-semibold ${category.kind === 'income' ? 'text-emerald-600' : category.kind === 'savings' ? 'text-sky-600' : 'text-red-600'}`}>
+                    {category.kind === 'expense' ? '-' : '+'}${category.amount.toFixed(2)}
                   </p>
                 </div>
               ))}
               {categoryData.length === 0 && (
-                <p className="text-sm text-muted">No income or expense data for this month yet.</p>
+                <p className="text-sm text-muted">No income, expense, or wealth transfer data for this month yet.</p>
               )}
             </div>
           </div>

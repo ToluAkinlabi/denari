@@ -25,6 +25,7 @@ const categories = [
 
   // Wealth
   { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', icon: 'PiggyBank', countsAsExpense: false, countsAsSavings: true },
+  { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', icon: 'LineChart', countsAsExpense: false, countsAsSavings: true },
 ];
 
 async function main() {

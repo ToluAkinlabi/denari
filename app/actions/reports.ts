@@ -30,7 +30,7 @@ export interface MonthlyReportData {
   spending: string;
   savings: string;
   wealthCreated: string;
-  categoryBreakdown: Array<{ category: string; amount: string; percentage: string; kind: 'income' | 'expense' }>;
+  categoryBreakdown: Array<{ category: string; amount: string; percentage: string; kind: 'income' | 'expense' | 'savings' }>;
   periodLabels: string[];
   trendIncome: string[];
   trendSpending: string[];
@@ -133,7 +133,7 @@ export async function getMonthlyReport(
     const cashflowByCategory = calculateCashflowByCategory(allEntries as never, categoryMap);
 
     const categoryBreakdown = cashflowByCategory
-      .map((item: { categoryName: string; amount: Decimal; percentage: Decimal; kind: 'income' | 'expense' }) => ({
+      .map((item: { categoryName: string; amount: Decimal; percentage: Decimal; kind: 'income' | 'expense' | 'savings' }) => ({
         category: item.categoryName,
         amount: item.amount.toFixed(2),
         percentage: `${item.percentage.toFixed(1)}%`,

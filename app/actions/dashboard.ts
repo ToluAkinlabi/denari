@@ -87,7 +87,7 @@ export interface DashboardData {
     emoji?: string;
     amount: string;
     percentage: string;
-    kind: 'income' | 'expense';
+    kind: 'income' | 'expense' | 'savings';
     trend: 'up' | 'down' | 'stable';
   }>;
   savingsRecap: {
