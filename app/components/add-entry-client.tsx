@@ -3,8 +3,7 @@
 import { type FormEvent, useEffect, useMemo, useState, useTransition } from 'react';
 import { Card } from '@/components/card';
 import { Plus, ArrowUp, ArrowDown } from 'lucide-react';
-import { addQuickEntry, addTransaction, importBacklogEntries } from '@/app/actions/transactions';
-import { parseIsoDateString } from '@/lib/validators/schemas';
+import { addQuickEntry, addTransaction } from '@/app/actions/transactions';
 
 interface AddEntryClientProps {
   periodId: string;
@@ -23,32 +22,6 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
     return `${year}-${month}-${day}`;
   };
 
-  const parseMonthAbbrevDate = (value: string) => {
-    const match = value.trim().match(/^(\d{1,2})-([A-Za-z]{3})$/);
-    if (!match) return new Date('invalid');
-
-    const [, dayText, monthText] = match;
-    const monthLookup: Record<string, number> = {
-      jan: 0,
-      feb: 1,
-      mar: 2,
-      apr: 3,
-      may: 4,
-      jun: 5,
-      jul: 6,
-      aug: 7,
-      sep: 8,
-      oct: 9,
-      nov: 10,
-      dec: 11,
-    };
-
-    const month = monthLookup[monthText.toLowerCase()];
-    if (month == null) return new Date('invalid');
-
-    return new Date(2026, month, Number(dayText));
-  };
-
   const [tab, setTab] = useState<'quick' | 'detailed' | 'backlog'>('quick');
   const [quickInput, setQuickInput] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -59,7 +32,6 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [categoryId, setCategoryId] = useState(() => categories[0]?.id ?? '');
-  const [backlogText, setBacklogText] = useState('');
   const [toast, setToast] = useState<{
     kind: 'success' | 'error';
     text: string;
@@ -71,7 +43,6 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
   );
 
   useEffect(() => {
-    // Initialize with local calendar date to avoid UTC day-shift on period boundaries.
     if (!date) {
       setDate(formatLocalDateForInput(new Date()));
     }
@@ -139,151 +110,6 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
       setAmount('');
       setDescription('');
       showResult(true, 'Transaction saved');
-    });
-  }
-
-  function parseBacklogRows(text: string) {
-    const parseMoney = (raw: string) => {
-      const cleaned = raw.replace(/[$,\s]/g, '').trim();
-      if (!cleaned || cleaned === '-') return '';
-      // Handle accounting negative values like (827.19)
-      if (/^\(.*\)$/.test(cleaned)) {
-        return `-${cleaned.slice(1, -1)}`;
-      }
-      return cleaned;
-    };
-
-    const parseDateValue = (raw: string) => {
-      const value = raw.trim();
-      if (!value) return new Date('invalid');
-
-      // Supports values like "9-Jan", "23-Jan", "2026-01-09"
-      if (/^\d{1,2}-[A-Za-z]{3}$/.test(value)) {
-        return parseMonthAbbrevDate(value);
-      }
-
-      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return parseIsoDateString(value) || new Date('invalid');
-      }
-
-      return new Date(value);
-    };
-
-    // Existing simple format: YYYY-MM-DD | Category | Amount | Description | Note | EntryType
-    if (text.includes('|')) {
-      const lines = text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-      const rows = lines.map((line) => {
-        const parts = line.split('|').map((p) => p.trim());
-        const [dateStr, categoryName, amount, description = '', note = '', entryType = ''] = parts;
-
-        return {
-          date: parseIsoDateString(dateStr) || new Date(dateStr),
-          categoryName,
-          amount,
-          description,
-          note,
-          entryType: entryType ? (entryType.toUpperCase() as 'INCOME' | 'EXPENSE' | 'SAVINGS') : undefined,
-        };
-      });
-
-      return rows;
-    }
-
-    // Spreadsheet format with header row and tab/comma separated columns.
-    const lines = text
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (lines.length < 2) {
-      return [];
-    }
-
-    const separator = lines[0].includes('\t') ? '\t' : ',';
-    const headers = lines[0].split(separator).map((h) => h.trim().toLowerCase());
-    const rows: Array<{
-      date: Date;
-      categoryName: string;
-      amount: string;
-      description: string;
-      note: string;
-      entryType?: 'INCOME' | 'EXPENSE' | 'SAVINGS';
-    }> = [];
-
-    const categoryColumnMap: Record<string, { categoryName: string; entryType: 'INCOME' | 'EXPENSE' | 'SAVINGS' }> = {
-      income: { categoryName: 'Income', entryType: 'INCOME' },
-      debt: { categoryName: 'Debt', entryType: 'EXPENSE' },
-      partnership: { categoryName: 'Partnership', entryType: 'EXPENSE' },
-      groceries: { categoryName: 'Grocery', entryType: 'EXPENSE' },
-      rent: { categoryName: 'Rent', entryType: 'EXPENSE' },
-      'phone bill': { categoryName: 'Phone', entryType: 'EXPENSE' },
-      'other house expenses': { categoryName: 'Other', entryType: 'EXPENSE' },
-      'spending money': { categoryName: 'Spend', entryType: 'EXPENSE' },
-      miscellaneous: { categoryName: 'Misc', entryType: 'EXPENSE' },
-      savings: { categoryName: 'Savings', entryType: 'SAVINGS' },
-    };
-
-    for (let lineIndex = 1; lineIndex < lines.length; lineIndex++) {
-      const columns = lines[lineIndex].split(separator).map((c) => c.trim());
-      const rowRecord = Object.fromEntries(headers.map((h, idx) => [h, columns[idx] ?? '']));
-      const rowDate = parseDateValue(rowRecord.date || '');
-      const rowNote = rowRecord.notes || '';
-      let noteAttached = false;
-
-      Object.entries(categoryColumnMap).forEach(([columnName, config]) => {
-        const amount = parseMoney(rowRecord[columnName] || '');
-        if (!amount) return;
-
-        rows.push({
-          date: rowDate,
-          categoryName: config.categoryName,
-          amount,
-          description: `${config.categoryName} backlog`,
-          note: !noteAttached ? rowNote : '',
-          entryType: config.entryType,
-        });
-
-        noteAttached = true;
-      });
-    }
-
-    return rows;
-  }
-
-  function submitBacklog() {
-    if (!backlogText.trim()) {
-      showResult(false, 'Paste backlog rows first');
-      return;
-    }
-
-    startTransition(async () => {
-      const rows = parseBacklogRows(backlogText);
-      
-      // Convert Date objects to ISO date strings
-      const rowsWithIsoDate = rows.map(row => ({
-        ...row,
-        date: row.date.toISOString().split('T')[0], // Convert to YYYY-MM-DD
-      }));
-      
-      const result = await importBacklogEntries({ rows: rowsWithIsoDate });
-
-      if (!result.success || !result.data) {
-        showResult(false, result.error || 'Backlog import failed');
-        return;
-      }
-
-      const summary = `Imported ${result.data.imported}, failed ${result.data.failed}`;
-      if (result.data.failed > 0) {
-        showResult(false, `${summary}. ${result.data.errors.slice(0, 3).join(' | ')}`);
-        return;
-      }
-
-      setBacklogText('');
-      showResult(true, summary);
     });
   }
 

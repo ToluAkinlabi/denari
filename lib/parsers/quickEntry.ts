@@ -217,8 +217,9 @@ export function inferCategory(text: string): {
  */
 export function inferEntryType(
   category: string,
-  _text?: string
+  text?: string
 ): 'INCOME' | 'EXPENSE' | 'SAVINGS' {
+  void text;
   const lower = category.toLowerCase();
 
   if (

@@ -34,23 +34,64 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   errors?: Record<string, string>;
+  warning?: string;
 }
 
 function toLedgerEntryType(type: 'INCOME' | 'EXPENSE' | 'SAVINGS') {
   return type === 'SAVINGS' ? 'TRANSFER' : type;
 }
 
-function enforceEntryTypeForCategory(
+type LedgerWriteType = 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT';
+
+function resolveEntryTypeForCategory(
   requestedType: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT',
   category: { type: string; countsAsSavings?: boolean }
-): 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT' {
-  // Category is authoritative for core money-movement types.
-  if (category.type === 'INCOME') return 'INCOME';
-  if (category.countsAsSavings) return 'TRANSFER';
+): { entryType?: LedgerWriteType; warning?: string; error?: string } {
+  if (requestedType === 'SUMMARY_ENTRY' || requestedType === 'ADJUSTMENT') {
+    return { entryType: requestedType };
+  }
 
-  if (requestedType === 'INCOME') return 'EXPENSE';
-  if (requestedType === 'TRANSFER') return 'EXPENSE';
-  return requestedType;
+  // Category is authoritative for core money-movement types.
+  if (category.type === 'INCOME') {
+    if (requestedType !== 'INCOME') {
+      return {
+        error: 'Income category only accepts INCOME entries. Choose an expense/savings category for outflows.',
+      };
+    }
+    return { entryType: 'INCOME' };
+  }
+
+  if (category.countsAsSavings) {
+    if (requestedType === 'INCOME') {
+      return {
+        error: 'Savings categories cannot be logged as INCOME. Use TRANSFER (or select Income category).',
+      };
+    }
+
+    if (requestedType === 'EXPENSE') {
+      return {
+        entryType: 'TRANSFER',
+        warning: 'Saved as TRANSFER because this category is marked as savings.',
+      };
+    }
+
+    return { entryType: 'TRANSFER' };
+  }
+
+  // Regular expense categories
+  if (requestedType === 'INCOME') {
+    return {
+      error: 'Expense categories cannot be logged as INCOME. Use the Income category instead.',
+    };
+  }
+
+  if (requestedType === 'TRANSFER') {
+    return {
+      error: 'Transfers are only allowed for savings categories. Choose Savings/Investment or use EXPENSE.',
+    };
+  }
+
+  return { entryType: 'EXPENSE' };
 }
 
 function revalidateAiInsight(userId: string) {
@@ -369,10 +410,17 @@ export async function addQuickEntry(
     const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
 
     // Step 6: Create ledger entry
-    const entryType = enforceEntryTypeForCategory(
+    const resolvedType = resolveEntryTypeForCategory(
       toLedgerEntryType(parsed.entryType),
       category
     );
+    if (resolvedType.error || !resolvedType.entryType) {
+      return {
+        success: false,
+        error: resolvedType.error || 'Invalid entry type for selected category.',
+      };
+    }
+    const entryType = resolvedType.entryType;
 
     const metadata = await inferEntryForecastMetadata({
       userId,
@@ -413,6 +461,7 @@ export async function addQuickEntry(
     revalidateAiInsight(userId);
     return {
       success: true,
+      warning: resolvedType.warning,
       data: {
         id: entry.id,
         description: entry.description || '',
@@ -493,10 +542,17 @@ export async function addTransaction(
       (await periodsRepo.ensurePeriodForDateAndUser(userId, date)).id;
 
     // Step 4: Create entry
-    const entryType = enforceEntryTypeForCategory(
+    const resolvedType = resolveEntryTypeForCategory(
       toLedgerEntryType(data.entryType),
       category
     );
+    if (resolvedType.error || !resolvedType.entryType) {
+      return {
+        success: false,
+        error: resolvedType.error || 'Invalid entry type for selected category.',
+      };
+    }
+    const entryType = resolvedType.entryType;
     const metadata = await inferEntryForecastMetadata({
       userId,
       categoryId: data.categoryId,
@@ -536,6 +592,7 @@ export async function addTransaction(
     revalidateAiInsight(userId);
     return {
       success: true,
+      warning: resolvedType.warning,
       data: {
         id: entry.id,
         description: entry.description || '',
@@ -584,6 +641,7 @@ export async function importBacklogEntries(
     let imported = 0;
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
 
     for (let i = 0; i < validationError.rows.length; i++) {
       const row = validationError.rows[i];
@@ -603,10 +661,17 @@ export async function importBacklogEntries(
         const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
         const type = row.entryType || (category.type === 'INCOME' ? 'INCOME' : category.type === 'SAVINGS' ? 'SAVINGS' : 'EXPENSE');
 
-        const entryType = enforceEntryTypeForCategory(
+        const resolvedType = resolveEntryTypeForCategory(
           toLedgerEntryType(type),
           category
         );
+        if (resolvedType.error || !resolvedType.entryType) {
+          throw new Error(resolvedType.error || 'Invalid entry type for selected category.');
+        }
+        const entryType = resolvedType.entryType;
+        if (resolvedType.warning) {
+          warnings.push(`Row ${i + 1}: ${resolvedType.warning}`);
+        }
         const metadata = await inferEntryForecastMetadata({
           userId,
           categoryId: category.id,
@@ -662,7 +727,8 @@ export async function importBacklogEntries(
 
     return {
       success: true,
-      data: { imported, failed, errors },
+      warning: warnings.length > 0 ? `${warnings.length} row(s) auto-corrected to keep category/type consistency.` : undefined,
+      data: { imported, failed, errors: [...warnings, ...errors] },
     };
   } catch (error) {
     return {
@@ -942,6 +1008,20 @@ export async function updateTransaction(
         return {
           success: false,
           error: 'Expense entries cannot use Income categories',
+        };
+      }
+
+      if (entry.entryType === 'EXPENSE' && category.countsAsSavings) {
+        return {
+          success: false,
+          error: 'Expense entries cannot use savings categories. Use Savings/Investment with TRANSFER instead.',
+        };
+      }
+
+      if (entry.entryType === 'TRANSFER' && category.type === 'INCOME') {
+        return {
+          success: false,
+          error: 'Transfer entries cannot use Income categories.',
         };
       }
     }

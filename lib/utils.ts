@@ -218,8 +218,6 @@ export function getAmountColor(
   amount: number | Decimal,
   type: 'income' | 'expense' | 'transfer'
 ): string {
-  const numValue = typeof amount === 'object' ? amount.toNumber() : amount;
-
   switch (type) {
     case 'income':
       return 'text-green-600';

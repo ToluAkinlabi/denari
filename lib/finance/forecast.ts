@@ -113,6 +113,7 @@ export function forecastSpending(
   recentSpending: Decimal[],
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
 ): Decimal {
+  void confidence;
   return getHistoricalAverage(recentSpending);
 }
 
@@ -132,6 +133,7 @@ export function forecastSavings(
   recentSavings: Decimal[],
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
 ): Decimal {
+  void confidence;
   return getHistoricalAverage(recentSavings);
 }
 

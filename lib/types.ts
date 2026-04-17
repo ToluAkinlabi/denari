@@ -6,7 +6,6 @@ import {
   Category as PrismaCategory,
   Period as PrismaPeriod,
   LedgerEntry as PrismaLedgerEntry,
-  User as PrismaUser,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 

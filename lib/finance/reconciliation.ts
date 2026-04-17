@@ -150,6 +150,7 @@ export function generateReconciliationHints(
   entries: LedgerEntryLike[],
   categoryMap: Map<string, { type: string; countsAsExpense: boolean }>
 ): string[] {
+  void categoryMap;
   const hints: string[] = [];
 
   const diffAmount = Math.abs(parseFloat(difference.toString()));
