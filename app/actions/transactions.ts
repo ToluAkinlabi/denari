@@ -40,6 +40,19 @@ function toLedgerEntryType(type: 'INCOME' | 'EXPENSE' | 'SAVINGS') {
   return type === 'SAVINGS' ? 'TRANSFER' : type;
 }
 
+function enforceEntryTypeForCategory(
+  requestedType: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT',
+  category: { type: string; countsAsSavings?: boolean }
+): 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'SUMMARY_ENTRY' | 'ADJUSTMENT' {
+  // Category is authoritative for core money-movement types.
+  if (category.type === 'INCOME') return 'INCOME';
+  if (category.countsAsSavings) return 'TRANSFER';
+
+  if (requestedType === 'INCOME') return 'EXPENSE';
+  if (requestedType === 'TRANSFER') return 'EXPENSE';
+  return requestedType;
+}
+
 function revalidateAiInsight(userId: string) {
   revalidateTag(`daily-ai-insight:${userId}`);
 }
@@ -356,10 +369,15 @@ export async function addQuickEntry(
     const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
 
     // Step 6: Create ledger entry
+    const entryType = enforceEntryTypeForCategory(
+      toLedgerEntryType(parsed.entryType),
+      category
+    );
+
     const metadata = await inferEntryForecastMetadata({
       userId,
       categoryId: category.id,
-      entryType: toLedgerEntryType(parsed.entryType),
+      entryType,
       date: entryDate,
       description: parsed.description,
       categoryDefaultStrategy: category.defaultStrategy,
@@ -371,7 +389,7 @@ export async function addQuickEntry(
       amount: parsed.amount,
       categoryId: category.id,
       description: parsed.description,
-      entryType: toLedgerEntryType(parsed.entryType),
+      entryType,
       periodId: period.id,
       userId,
       tags: metadata.tags,
@@ -381,7 +399,7 @@ export async function addQuickEntry(
     });
 
     // Step 7: Handle savings allocations
-    if (parsed.entryType === 'SAVINGS') {
+    if (entryType === 'TRANSFER') {
       await savingsRepo.createAllocation({
         ledgerEntryId: entry.id,
         bucket: category.name,
@@ -475,7 +493,10 @@ export async function addTransaction(
       (await periodsRepo.ensurePeriodForDateAndUser(userId, date)).id;
 
     // Step 4: Create entry
-    const entryType = toLedgerEntryType(data.entryType);
+    const entryType = enforceEntryTypeForCategory(
+      toLedgerEntryType(data.entryType),
+      category
+    );
     const metadata = await inferEntryForecastMetadata({
       userId,
       categoryId: data.categoryId,
@@ -501,7 +522,7 @@ export async function addTransaction(
     });
 
     // Step 5: Handle savings allocations
-    if (data.entryType === 'SAVINGS') {
+    if (entryType === 'TRANSFER') {
       await savingsRepo.createAllocation({
         ledgerEntryId: entry.id,
         bucket: category.name,
@@ -582,7 +603,10 @@ export async function importBacklogEntries(
         const period = await periodsRepo.ensurePeriodForDateAndUser(userId, entryDate);
         const type = row.entryType || (category.type === 'INCOME' ? 'INCOME' : category.type === 'SAVINGS' ? 'SAVINGS' : 'EXPENSE');
 
-        const entryType = toLedgerEntryType(type);
+        const entryType = enforceEntryTypeForCategory(
+          toLedgerEntryType(type),
+          category
+        );
         const metadata = await inferEntryForecastMetadata({
           userId,
           categoryId: category.id,
@@ -607,7 +631,7 @@ export async function importBacklogEntries(
           isProvisional: metadata.isProvisional,
         });
 
-        if (type === 'SAVINGS') {
+        if (entryType === 'TRANSFER') {
           await savingsRepo.createAllocation({
             ledgerEntryId: entry.id,
             bucket: category.name,
@@ -896,6 +920,28 @@ export async function updateTransaction(
         return {
           success: false,
           error: 'Category not found',
+        };
+      }
+
+      // Keep existing entry types semantically valid when category changes.
+      if (entry.entryType === 'INCOME' && category.type !== 'INCOME') {
+        return {
+          success: false,
+          error: 'Income entries can only use Income categories',
+        };
+      }
+
+      if (entry.entryType === 'TRANSFER' && !category.countsAsSavings) {
+        return {
+          success: false,
+          error: 'Savings/transfer entries can only use savings categories',
+        };
+      }
+
+      if (entry.entryType === 'EXPENSE' && category.type === 'INCOME') {
+        return {
+          success: false,
+          error: 'Expense entries cannot use Income categories',
         };
       }
     }

@@ -42,6 +42,10 @@ export interface CategoryForecast {
   notes?: string;
 }
 
+function maxDecimal(a: Decimal, b: Decimal): Decimal {
+  return a.comparedTo(b) >= 0 ? a : b;
+}
+
 /**
  * Calculate weighted average with recency bias
  * More recent periods get higher weight
@@ -138,13 +142,17 @@ export function forecastCategory(history: CategoryHistory, periodIncome: Decimal
       // Amortize over expected frequency
       const periodsPerOccurrence = Math.max(1, Math.round(freq.avgGapDays / 14)); // 14-day periods
       const amortized = avgAmount.dividedBy(periodsPerOccurrence);
+      const occurrenceFactor = Math.min(1, 14 / Math.max(14, freq.avgGapDays));
+      const minFactor = Math.max(0.2, occurrenceFactor * 0.5);
+      const maxFactor = Math.max(0.45, occurrenceFactor);
+      const irregularMax = maxDecimal(avgAmount.times(maxFactor).toDecimalPlaces(2), amortized.toDecimalPlaces(2));
 
       forecast = {
-        min: new Decimal(0),  // Might not happen this period
-        likely: amortized,
-        max: avgAmount,       // Might happen this period
+        min: amortized.times(minFactor).toDecimalPlaces(2),
+        likely: amortized.toDecimalPlaces(2),
+        max: irregularMax,
       };
-      confidence = 'LOW';
+      confidence = freq.avgGapDays <= 28 ? 'MEDIUM' : 'LOW';
       notes = `Avg: $${avgAmount.toFixed(2)} every ~${freq.avgGapDays} days`;
       break;
 
@@ -258,12 +266,17 @@ export function forecastNextPeriodEnhanced(input: {
   const spending = aggregateForecasts(spendingForecasts);
   const savings = aggregateForecasts(savingsForecasts);
 
-  // Calculate discretionary buffer (5-10% of income for unknowns)
-  const bufferPercent = 0.075;  // 7.5% default
+  // Dynamic discretionary buffer: tighter when strategies are known, wider when unknown-heavy.
+  const allForecasts = [...incomeForecasts, ...spendingForecasts, ...savingsForecasts];
+  const unknownCount = allForecasts.filter((f) => f.strategy === 'UNKNOWN').length;
+  const unknownRatio = allForecasts.length > 0 ? unknownCount / allForecasts.length : 1;
+  const thinHistoryPenalty = allForecasts.length <= 4 ? 0.01 : 0;
+  const bufferPercent = Math.min(0.07, 0.02 + unknownRatio * 0.04 + thinHistoryPenalty);
+
   const discretionaryBuffer: ForecastRange = {
-    min: income.min.times(0.05).toDecimalPlaces(2),
+    min: income.min.times(bufferPercent * 0.6).toDecimalPlaces(2),
     likely: income.likely.times(bufferPercent).toDecimalPlaces(2),
-    max: income.likely.times(0.10).toDecimalPlaces(2),
+    max: income.max.times(bufferPercent * 1.35).toDecimalPlaces(2),
   };
 
   // Calculate wealth and ending cash
@@ -295,11 +308,7 @@ export function forecastNextPeriodEnhanced(input: {
   };
 
   // Overall confidence
-  const confidence = determineOverallConfidence([
-    ...incomeForecasts,
-    ...spendingForecasts,
-    ...savingsForecasts,
-  ]);
+  const confidence = determineOverallConfidence(allForecasts);
 
   // Generate warnings
   const warnings = generateWarnings({

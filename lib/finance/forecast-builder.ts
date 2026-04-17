@@ -30,6 +30,8 @@ export function buildCategoryHistory(
   // Group entries by category
   entries.forEach(entry => {
     if (entry.entryType !== entryType) return;
+    // Savings-designated categories are forecasted in the savings pipeline only.
+    if (entryType === 'EXPENSE' && entry.category.countsAsSavings) return;
 
     const catId = entry.categoryId;
     if (!categoryMap.has(catId)) {
@@ -105,7 +107,7 @@ function inferStrategyFromHistory(
     return 'KNOWN_IRREGULAR';
   }
 
-  if (amountVariance < 0.45) {
+  if (amountVariance < 0.35) {
     return 'KNOWN_VARIABLE';
   }
 
@@ -126,7 +128,8 @@ export function buildSavingsHistory(
 
   // Group savings/transfer entries
   entries.forEach(entry => {
-    if (entry.entryType !== 'TRANSFER' && !entry.category.countsAsSavings) return;
+    // Treat explicit transfers and savings-designated non-income entries as savings history.
+    if (entry.entryType !== 'TRANSFER' && !(entry.category.countsAsSavings && entry.entryType !== 'INCOME')) return;
 
     const catId = entry.categoryId;
     if (!categoryMap.has(catId)) {
