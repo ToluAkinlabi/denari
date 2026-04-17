@@ -32,7 +32,7 @@ export default function RootLayout({
         <link rel="icon" href="/icon.svg" />
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
-      <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-50">
+      <body className="bg-app-atmosphere text-gray-900 dark:text-gray-50">
         <Providers>
           <DevSwGuard />
           <div className="min-h-screen flex flex-col">

@@ -33,9 +33,9 @@ export function Navigation() {
             key={href}
             href={href}
             aria-label={label}
-            className={`flex items-center justify-center py-4 px-2 transition-colors duration-200 ${
+            className={`flex items-center justify-center py-4 px-2 mx-1 my-2 rounded-xl transition-all duration-200 ${
               isActive(href)
-                ? 'text-sky-500'
+                ? 'nav-tab-active scale-105'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
             }`}
             title={label}
