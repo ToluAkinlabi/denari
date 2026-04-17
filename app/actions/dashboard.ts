@@ -550,12 +550,18 @@ export async function getDashboardData(
       })
       .reduce((sum, entry) => sum.plus(new Decimal(String(entry.amount))), new Decimal(0));
 
-    const scenarioExtraSpend = new Decimal(Math.max(25, Number(currentSpending.times(0.08).toFixed(2))));
+    const scenarioExtraSpend = new Decimal(
+      Math.min(250, Math.max(25, Number(currentSpending.times(0.08).toFixed(2))))
+    );
     const scenarioSkipSavings = currentSavings.greaterThan(0)
-      ? new Decimal(Math.max(20, Number(currentSavings.times(0.5).toFixed(2))))
+      ? new Decimal(
+          Math.min(250, Math.max(20, Number(currentSavings.times(0.35).toFixed(2))))
+        )
       : new Decimal(0);
     const scenarioSkipPartnership = partnershipContribution.greaterThan(0)
-      ? new Decimal(Math.max(20, Number(partnershipContribution.times(0.5).toFixed(2))))
+      ? new Decimal(
+          Math.min(300, Math.max(20, Number(partnershipContribution.times(0.3).toFixed(2))))
+        )
       : new Decimal(0);
     const forecastLikelyCash = new Decimal(forecast.nextEndingCash || '0');
     const scenarioRiskCash = forecastLikelyCash.minus(scenarioExtraSpend);
