@@ -44,7 +44,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <p className="text-muted">See where your money stands</p>
       </div>
 
-      <Card className="p-3 bg-gray-800">
+      <Card className="p-3 bg-[#232323]">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Cash</p>
@@ -223,7 +223,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card id="daily-ai-briefing" className="p-4 bg-gray-800">
+      <Card id="daily-ai-briefing" className="p-4 bg-[#232323]">
         <h3 className="text-sm font-semibold mb-3">
           Daily AI Briefing{' '}
           <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
