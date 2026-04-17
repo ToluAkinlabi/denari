@@ -56,7 +56,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
           <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Flags</p>
-              <a href="#daily-ai-briefing" className="text-sm font-bold text-gray-100 underline-offset-2 hover:underline">
+              <a href="#daily-ai-briefing" className="text-sm font-bold text-amber-300 underline-offset-2 hover:underline">
               {data.forecast.warnings.length}
             </a>
             <p className="text-[10px] text-muted">Tap to review</p>
