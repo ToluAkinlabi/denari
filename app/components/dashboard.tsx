@@ -44,19 +44,19 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <p className="text-muted">See where your money stands</p>
       </div>
 
-      <Card className="p-3 bg-gradient-to-r from-sky-50/90 via-white to-amber-50/80 dark:from-sky-950/40 dark:via-gray-900 dark:to-amber-900/20">
+      <Card className="p-3 bg-gray-800">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg border border-sky-100 dark:border-sky-900 px-2 py-2">
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Cash</p>
-            <p className="text-sm font-bold text-sky-600 dark:text-sky-300">${data.cashMetrics.ending}</p>
+            <p className="text-sm font-bold text-amber-400">${data.cashMetrics.ending}</p>
           </div>
-          <div className="rounded-lg border border-amber-100 dark:border-amber-900 px-2 py-2">
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Pace</p>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{data.paceMetrics.status}</p>
+            <p className="text-sm font-bold text-amber-300">{data.paceMetrics.status}</p>
           </div>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Flags</p>
-            <a href="#daily-ai-briefing" className="text-sm font-bold text-gray-900 dark:text-gray-100 underline-offset-2 hover:underline">
+              <a href="#daily-ai-briefing" className="text-sm font-bold text-gray-100 underline-offset-2 hover:underline">
               {data.forecast.warnings.length}
             </a>
             <p className="text-[10px] text-muted">Tap to review</p>
@@ -81,7 +81,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
               <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : isSpenddown ? 'text-amber-800 dark:text-amber-200 font-semibold' : 'text-muted'}`}>
                 {data.wealthMetrics.isNegative ? 'Wealth Deficit' : isSpenddown ? 'Net Spenddown' : 'Wealth Created'}
               </p>
-              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
+              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-400' : isSpenddown ? 'text-amber-300' : 'text-amber-400'}`}>${data.wealthMetrics.created}</p>
               <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-muted'}`}>
                 {data.wealthMetrics.isNegative
                   ? 'Actual running cash is below zero'
@@ -90,7 +90,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
                   : 'Income minus real spending (savings + remaining income)'}
               </p>
             </div>
-            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-sky-500'} />
+            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-400' : isSpenddown ? 'text-amber-300' : 'text-amber-400'} />
           </div>
         </Card>
 
@@ -159,11 +159,11 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-300 bg-red-50 dark:bg-red-950/30' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30' : 'border-green-300 bg-green-50 dark:bg-green-950/30'}`}>
+      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-700 bg-red-950/50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-700 bg-yellow-950/40' : 'border-green-700 bg-green-950/40'}`}>
         <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Day {data.paceMetrics.day} of {data.paceMetrics.totalDays}</span>
+            <span className="text-sm font-medium text-gray-300">Day {data.paceMetrics.day} of {data.paceMetrics.totalDays}</span>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
               data.paceMetrics.status === 'RED'
                 ? 'bg-red-600 text-white'
@@ -176,19 +176,19 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400 font-medium">Daily Budget</p>
-              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.dailyBudget}</p>
+              <p className="text-gray-400 font-medium">Daily Budget</p>
+              <p className="font-bold text-sm text-gray-100">${data.paceMetrics.dailyBudget}</p>
             </div>
-            <div className="text-center border-l border-r border-gray-400 dark:border-gray-500">
-              <p className="text-gray-600 dark:text-gray-400 font-medium">Expected</p>
-              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.expectedSpend}</p>
+            <div className="text-center border-l border-r border-gray-600">
+              <p className="text-gray-400 font-medium">Expected</p>
+              <p className="font-bold text-sm text-gray-100">${data.paceMetrics.expectedSpend}</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400 font-medium">Actual</p>
-              <p className="font-bold text-sm text-gray-900 dark:text-gray-100">${data.paceMetrics.actualSpend}</p>
+              <p className="text-gray-400 font-medium">Actual</p>
+              <p className="font-bold text-sm text-gray-100">${data.paceMetrics.actualSpend}</p>
             </div>
           </div>
-          <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2.5">
+          <div className="w-full bg-gray-700 rounded-full h-2.5">
             <div className={`h-2.5 rounded-full ${
               data.paceMetrics.status === 'RED'
                 ? 'bg-red-600'
@@ -212,7 +212,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
                 <p className="text-sm font-medium">{item.emoji ? `${item.emoji} ` : ''}{item.name}</p>
                 <p className="text-xs text-muted">{item.percentage}</p>
               </div>
-                <p className={`text-sm font-semibold ${item.kind === 'income' ? 'text-emerald-600' : item.kind === 'savings' ? 'text-sky-600' : 'text-red-600'}`}>
+                <p className={`text-sm font-semibold ${item.kind === 'income' ? 'text-emerald-400' : item.kind === 'savings' ? 'text-amber-400' : 'text-red-400'}`}>
                   {item.kind === 'expense' ? '-' : '+'}${item.amount}
               </p>
             </div>
@@ -223,13 +223,13 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card id="daily-ai-briefing" className="p-4 bg-gradient-to-br from-sky-50 dark:from-sky-950 to-transparent">
+      <Card id="daily-ai-briefing" className="p-4 bg-gray-800">
         <h3 className="text-sm font-semibold mb-3">
           Daily AI Briefing{' '}
           <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
-            data.forecast.confidence === 'HIGH' ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300' :
-            data.forecast.confidence === 'MEDIUM' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' :
-            'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
+            data.forecast.confidence === 'HIGH' ? 'bg-emerald-900 text-emerald-300' :
+            data.forecast.confidence === 'MEDIUM' ? 'bg-gray-700 text-gray-200' :
+            'bg-amber-900 text-amber-300'
           }`}>
             {data.aiInsight.model}
           </span>
@@ -240,21 +240,21 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </p>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
               <p className="text-muted">Income</p>
-              <p className="font-semibold text-emerald-600">${data.cashMetrics.income}</p>
+              <p className="font-semibold text-emerald-400">${data.cashMetrics.income}</p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
               <p className="text-muted">Spending</p>
-              <p className="font-semibold text-red-600">${data.cashMetrics.spending}</p>
+              <p className="font-semibold text-red-400">${data.cashMetrics.spending}</p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
               <p className="text-muted">Savings</p>
-              <p className="font-semibold text-sky-600">${data.cashMetrics.savings}</p>
+              <p className="font-semibold text-amber-400">${data.cashMetrics.savings}</p>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
               <p className="text-muted">Next Cash (Likely)</p>
-              <p className="font-semibold text-blue-700 dark:text-blue-300">${data.forecast.nextEndingCash}</p>
+              <p className="font-semibold text-amber-300">${data.forecast.nextEndingCash}</p>
             </div>
           </div>
 

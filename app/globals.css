@@ -38,11 +38,11 @@
 
 @layer components {
   .card {
-    @apply bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-4;
+    @apply bg-gray-900 rounded-lg shadow-sm border border-gray-700 p-4;
   }
 
   .card-premium {
-    @apply border-sky-100/80 dark:border-sky-900/60 shadow-[0_10px_30px_-20px_rgba(2,132,199,0.65)];
+    @apply border-gray-700 shadow-[0_8px_24px_-16px_rgba(0,0,0,0.8)];
   }
 
   .card-interactive {
@@ -51,25 +51,25 @@
 
   .btn-primary {
     @apply px-4 py-2 text-white rounded-lg font-medium transition-all duration-200 active:scale-95;
-    background-image: linear-gradient(135deg, var(--brand-blue-500), var(--brand-blue-900));
-    border: 1px solid rgba(251, 191, 36, 0.32);
-    box-shadow: 0 8px 20px -12px rgba(15, 23, 42, 0.88), 0 4px 18px -14px rgba(245, 158, 11, 0.95);
+    background-color: #374151;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 4px 12px -6px rgba(0,0,0,0.6);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.95), 0 6px 20px -12px rgba(245, 158, 11, 0.95);
+    background-color: #4b5563;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition-colors duration-200 active:scale-95;
+    @apply px-4 py-2 bg-gray-700 text-gray-100 rounded-lg font-medium transition-colors duration-200 active:scale-95;
   }
 
   .btn-ghost {
-    @apply px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors duration-200;
+    @apply px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg font-medium transition-colors duration-200;
   }
 
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-sky-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent;
   }
 
   .badge {
@@ -93,15 +93,15 @@
   }
 
   .text-muted {
-    @apply text-gray-600 dark:text-gray-400;
+    @apply text-gray-400;
   }
 
   .text-subtle {
-    @apply text-gray-500 dark:text-gray-500;
+    @apply text-gray-500;
   }
 
   .divider {
-    @apply border-t border-gray-200 dark:border-gray-800;
+    @apply border-t border-gray-700;
   }
 
   .grid-responsive {
@@ -117,17 +117,11 @@
   }
 
   .bg-app-atmosphere {
-    background:
-      radial-gradient(1200px 620px at 12% -22%, rgba(180, 83, 9, 0.22), transparent 56%),
-      radial-gradient(950px 560px at 95% 2%, rgba(250, 204, 21, 0.12), transparent 54%),
-      linear-gradient(180deg, rgba(17, 24, 39, 1) 0%, rgba(15, 23, 42, 1) 100%);
+    background-color: #111827;
   }
 
   .dark .bg-app-atmosphere {
-    background:
-      radial-gradient(1200px 680px at 15% -26%, rgba(180, 83, 9, 0.26), transparent 56%),
-      radial-gradient(900px 560px at 92% 2%, rgba(250, 204, 21, 0.14), transparent 50%),
-      linear-gradient(180deg, rgba(10, 10, 11, 1) 0%, rgba(17, 24, 39, 1) 100%);
+    background-color: #0d1117;
   }
 
   .nav-tab-active {
