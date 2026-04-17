@@ -44,6 +44,23 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <p className="text-muted">See where your money stands</p>
       </div>
 
+      <Card className="p-3 bg-gradient-to-r from-sky-50/90 via-white to-amber-50/80 dark:from-sky-950/40 dark:via-gray-900 dark:to-amber-900/20">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border border-sky-100 dark:border-sky-900 px-2 py-2">
+            <p className="text-[10px] text-muted uppercase tracking-wide">Cash</p>
+            <p className="text-sm font-bold text-sky-600 dark:text-sky-300">${data.cashMetrics.ending}</p>
+          </div>
+          <div className="rounded-lg border border-amber-100 dark:border-amber-900 px-2 py-2">
+            <p className="text-[10px] text-muted uppercase tracking-wide">Pace</p>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{data.paceMetrics.status}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-800 px-2 py-2">
+            <p className="text-[10px] text-muted uppercase tracking-wide">Alerts</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.forecast.warnings.length}</p>
+          </div>
+        </div>
+      </Card>
+
       <div className="space-y-3">
         <Card className="p-6">
           <div className="flex items-center justify-between">
@@ -58,11 +75,11 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <Card className={data.wealthMetrics.isNegative ? 'p-6 border-red-400 bg-red-100 dark:bg-red-950/40' : 'p-6'}>
           <div className="flex items-center justify-between">
             <div>
-              <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : isSpenddown ? 'text-amber-700 dark:text-amber-300 font-semibold' : 'text-muted'}`}>
+              <p className={`text-sm mb-1 ${data.wealthMetrics.isNegative ? 'text-red-900 dark:text-red-200 font-semibold' : isSpenddown ? 'text-amber-800 dark:text-amber-200 font-semibold' : 'text-muted'}`}>
                 {data.wealthMetrics.isNegative ? 'Wealth Deficit' : isSpenddown ? 'Net Spenddown' : 'Wealth Created'}
               </p>
-              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-600 dark:text-amber-300' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
-              <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : isSpenddown ? 'text-amber-700 dark:text-amber-300' : 'text-muted'}`}>
+              <p className={`text-3xl font-bold ${data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-sky-600'}`}>${data.wealthMetrics.created}</p>
+              <p className={`text-xs mt-1 ${data.wealthMetrics.isNegative ? 'text-red-800 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-muted'}`}>
                 {data.wealthMetrics.isNegative
                   ? 'Actual running cash is below zero'
                   : isSpenddown
@@ -70,7 +87,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
                   : 'Income minus real spending (savings + remaining income)'}
               </p>
             </div>
-            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-600 dark:text-amber-300' : 'text-sky-500'} />
+            <TrendingUp size={32} className={data.wealthMetrics.isNegative ? 'text-red-700 dark:text-red-300' : isSpenddown ? 'text-amber-800 dark:text-amber-200' : 'text-sky-500'} />
           </div>
         </Card>
 

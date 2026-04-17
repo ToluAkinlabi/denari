@@ -23,6 +23,8 @@ import type { MonthlyReportData } from '@/app/actions/reports';
 export default function ReportsPage() {
   const [report, setReport] = useState<{ success: boolean; data?: MonthlyReportData; error?: string }>({ success: false });
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<'performance' | 'mix' | 'trends'>('performance');
+  const [trendView, setTrendView] = useState<'bars' | 'trajectory'>('bars');
 
   useEffect(() => {
     const loadReport = async () => {
@@ -93,6 +95,42 @@ export default function ReportsPage() {
           <p className="text-muted">Analyze your finances</p>
         </div>
 
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          <button
+            type="button"
+            onClick={() => setActiveSection('performance')}
+            className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+              activeSection === 'performance'
+                ? 'bg-sky-600 text-white border-sky-500'
+                : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Performance
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('mix')}
+            className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+              activeSection === 'mix'
+                ? 'bg-sky-600 text-white border-sky-500'
+                : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Category Mix
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('trends')}
+            className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+              activeSection === 'trends'
+                ? 'bg-sky-600 text-white border-sky-500'
+                : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Trends
+          </button>
+        </div>
+
         <Card className="p-4">
           <h3 className="font-semibold mb-4">{data.monthLabel}</h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Totals from all periods overlapping this month</p>
@@ -116,6 +154,7 @@ export default function ReportsPage() {
           </div>
         </Card>
 
+        {activeSection === 'performance' && (
         <Card className="p-4">
           <h3 className="font-semibold mb-4">Performance Mix</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -136,7 +175,9 @@ export default function ReportsPage() {
             </BarChart>
           </ResponsiveContainer>
         </Card>
+        )}
 
+        {activeSection === 'mix' && (
         <Card className="p-4">
           <h3 className="font-semibold mb-4">Income, Expense & Wealth Mix</h3>
           <div className="grid gap-6 md:grid-cols-[minmax(0,320px)_1fr] items-center">
@@ -190,10 +231,37 @@ export default function ReportsPage() {
             </div>
           </div>
         </Card>
+        )}
 
+        {activeSection === 'trends' && (
         <Card className="p-4">
           <h3 className="font-semibold mb-4">Trends (Recent Periods)</h3>
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setTrendView('bars')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                trendView === 'bars'
+                  ? 'bg-sky-600 text-white border-sky-500'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Income vs Spend
+            </button>
+            <button
+              type="button"
+              onClick={() => setTrendView('trajectory')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                trendView === 'trajectory'
+                  ? 'bg-sky-600 text-white border-sky-500'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Wealth Trajectory
+            </button>
+          </div>
           <div className="space-y-6">
+            {trendView === 'bars' && (
             <div>
               <p className="text-xs text-muted mb-3">Income vs Spending vs Savings</p>
               <ResponsiveContainer width="100%" height={300}>
@@ -209,7 +277,9 @@ export default function ReportsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            )}
 
+            {trendView === 'trajectory' && (
             <div>
               <p className="text-xs text-muted mb-3">Wealth Trajectory</p>
               <ResponsiveContainer width="100%" height={250}>
@@ -240,8 +310,10 @@ export default function ReportsPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            )}
           </div>
         </Card>
+        )}
       </div>
     </div>
   );

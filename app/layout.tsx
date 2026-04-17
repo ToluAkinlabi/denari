@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Providers } from './providers';
 import { Navigation } from '@/components/navigation';
 import { DevSwGuard } from '@/components/dev-sw-guard';
+import { QuickAddFab } from '@/components/quick-add-fab';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,9 +37,10 @@ export default function RootLayout({
         <Providers>
           <DevSwGuard />
           <div className="min-h-screen flex flex-col">
-            <main className="flex-1 pb-20">
+            <main className="flex-1 pb-24">
               {children}
             </main>
+            <QuickAddFab />
             <Navigation />
           </div>
         </Providers>

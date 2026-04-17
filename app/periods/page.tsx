@@ -3,7 +3,7 @@
 import { Card } from '@/components/card';
 import { getRecentPeriods, reconcilePeriod, unreconcilePeriod } from '@/app/actions/periods';
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical, Undo2 } from 'lucide-react';
 
 type PeriodItem = {
   id: string;
@@ -116,6 +116,12 @@ export default function PeriodsPage() {
   const [error, setError] = useState<string | null>(null);
   const [reconcilingId, setReconcilingId] = useState<string | null>(null);
   const [reopeningId, setReopeningId] = useState<string | null>(null);
+  const [menuPeriodId, setMenuPeriodId] = useState<string | null>(null);
+  const [undoToast, setUndoToast] = useState<{
+    periodId: string;
+    label: string;
+    actualCash: string;
+  } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -184,7 +190,7 @@ export default function PeriodsPage() {
                 {/* Header */}
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="font-semibold">{period.label}</h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative">
                     {!period.isReconciled && (
                       <button
                         onClick={() => setReconcilingId(isOpen ? null : period.id)}
@@ -194,27 +200,50 @@ export default function PeriodsPage() {
                       </button>
                     )}
                     {period.isReconciled && (
-                      <button
-                        onClick={async () => {
-                          const confirmed = window.confirm('Reopen this reconciled period? This will remove its anchored actual closing cash and recalculate carry-forward balances.');
-                          if (!confirmed) return;
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setMenuPeriodId((prev) => (prev === period.id ? null : period.id))}
+                          className="p-1.5 rounded-md border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          aria-label="Period actions"
+                        >
+                          <MoreVertical size={14} />
+                        </button>
 
-                          setReopeningId(period.id);
-                          const response = await unreconcilePeriod({ periodId: period.id });
-                          setReopeningId(null);
+                        {menuPeriodId === period.id && (
+                          <div className="absolute right-14 top-0 z-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-1 min-w-[140px]">
+                            <button
+                              type="button"
+                              disabled={isReopening}
+                              onClick={async () => {
+                                setMenuPeriodId(null);
+                                const confirmed = window.confirm('Reopen this reconciled period? This removes its anchored actual closing cash and recalculates carry-forward balances.');
+                                if (!confirmed) return;
 
-                          if (!response.success) {
-                            setError(response.error ?? 'Could not reopen period.');
-                            return;
-                          }
+                                const previousActual = period.closingCashActual;
+                                setReopeningId(period.id);
+                                const response = await unreconcilePeriod({ periodId: period.id });
+                                setReopeningId(null);
 
-                          await load();
-                        }}
-                        disabled={isReopening}
-                        className="text-xs px-2 py-1 rounded-full border border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-60"
-                      >
-                        {isReopening ? 'Reopening…' : 'Reopen'}
-                      </button>
+                                if (!response.success) {
+                                  setError(response.error ?? 'Could not reopen period.');
+                                  return;
+                                }
+
+                                if (previousActual) {
+                                  setUndoToast({ periodId: period.id, label: period.label, actualCash: previousActual });
+                                  setTimeout(() => setUndoToast((current) => (current?.periodId === period.id ? null : current)), 8000);
+                                }
+
+                                await load();
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs rounded-md text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 disabled:opacity-60"
+                            >
+                              {isReopening ? 'Reopening…' : 'Reopen Period'}
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                     <span
                       className={`text-xs px-2 py-1 rounded-full ${
@@ -225,6 +254,12 @@ export default function PeriodsPage() {
                     </span>
                   </div>
                 </div>
+
+                {period.isReconciled && period.closingCashActual != null && (
+                  <p className="text-[11px] text-muted mb-2">
+                    Anchored with actual close ${fmt(period.closingCashActual)}
+                  </p>
+                )}
 
                 {/* Financials grid */}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted">
@@ -273,6 +308,32 @@ export default function PeriodsPage() {
             );
           })}
         </div>
+
+        {undoToast && (
+          <div className="fixed bottom-28 left-4 right-4 z-50 max-w-screen-sm mx-auto">
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 px-3 py-2 flex items-center justify-between gap-3">
+              <p className="text-xs text-amber-800 dark:text-amber-200 truncate">
+                Reopened {undoToast.label}
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const payload = undoToast;
+                  setUndoToast(null);
+                  const response = await reconcilePeriod({ periodId: payload.periodId, actualCash: payload.actualCash });
+                  if (!response.success) {
+                    setError(response.error ?? 'Could not undo reopen.');
+                    return;
+                  }
+                  await load();
+                }}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 dark:text-amber-200 hover:underline"
+              >
+                <Undo2 size={12} /> Undo
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="flex items-center justify-between pt-4">

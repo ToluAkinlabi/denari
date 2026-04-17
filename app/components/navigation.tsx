@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   List,
-  PlusCircle,
   Settings,
   TrendingUp,
   CalendarRange,
@@ -19,7 +18,6 @@ export function Navigation() {
   const navItems = [
     { href: '/', icon: Home, label: 'Dashboard', mobile: true },
     { href: '/transactions', icon: List, label: 'Transactions', mobile: true },
-    { href: '/add', icon: PlusCircle, label: 'Add', mobile: true },
     { href: '/reports', icon: TrendingUp, label: 'Reports', mobile: true },
     { href: '/periods', icon: CalendarRange, label: 'Periods', mobile: true },
     { href: '/settings', icon: Settings, label: 'Settings', mobile: true },
@@ -27,7 +25,7 @@ export function Navigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
-      <div className="grid grid-cols-6 max-w-screen-sm mx-auto">
+      <div className="grid grid-cols-5 max-w-screen-sm mx-auto">
         {navItems.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
