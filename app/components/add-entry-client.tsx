@@ -331,6 +331,8 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           >
             Detailed
           </button>
+          {/* Backlog import is intentionally hidden for now.
+              Keep this block for easy re-enable later.
           <button
             onClick={() => setTab('backlog')}
             className={`flex-1 py-2 px-3 rounded-lg font-medium transition-colors ${
@@ -342,6 +344,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           >
             Backlog
           </button>
+          */}
         </div>
 
         {message && (
@@ -482,6 +485,8 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </form>
         )}
 
+        {/* Backlog import panel intentionally disabled for now.
+            Keep this block for easy re-enable later.
         {tab === 'backlog' && (
           <div className="space-y-4">
             <Card className="p-4 space-y-3">
@@ -511,6 +516,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
             </button>
           </div>
         )}
+        */}
       </div>
     </div>
   );
