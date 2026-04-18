@@ -21,6 +21,12 @@ export function DashboardContent({ data }: DashboardContentProps) {
   const paceActual = Number(data.paceMetrics.actualSpend);
   const paceExpected = Number(data.paceMetrics.expectedSpend);
   const pacePercent = paceExpected > 0 ? Math.min(100, (paceActual / paceExpected) * 100) : 0;
+  const paceStatusColorClass =
+    data.paceMetrics.status === 'GREEN'
+      ? 'text-green-400'
+      : data.paceMetrics.status === 'RED'
+      ? 'text-red-400'
+      : 'text-amber-300';
   const wealthChange = Number(data.wealthMetrics.created);
   const isSpenddown = !data.wealthMetrics.isNegative && wealthChange < 0;
   const paceWidthClass =
@@ -52,7 +58,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
           <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Pace</p>
-            <p className="text-sm font-bold text-amber-300">{data.paceMetrics.status}</p>
+            <p className={`text-sm font-bold ${paceStatusColorClass}`}>{data.paceMetrics.status}</p>
           </div>
           <div className="rounded-lg border border-gray-700 px-2 py-2">
             <p className="text-[10px] text-muted uppercase tracking-wide">Flags</p>
