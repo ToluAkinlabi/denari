@@ -3,6 +3,7 @@ import { Bell, Moon, HelpCircle, LogOut } from 'lucide-react';
 import { getCategoryForecastSettings } from '@/app/actions/settings';
 import { SettingsForecastControls } from '@/app/components/settings-forecast-controls';
 import { SettingsDataActions } from '@/app/components/settings-data-actions';
+import { SettingsBankConnection } from '@/app/components/settings-bank-connection';
 
 export default async function SettingsPage() {
   const settingsResult = await getCategoryForecastSettings();
@@ -45,6 +46,9 @@ export default async function SettingsPage() {
             </div>
           </Card>
         </div>
+
+        {/* Bank Connection */}
+        <SettingsBankConnection />
 
         <SettingsDataActions />
 

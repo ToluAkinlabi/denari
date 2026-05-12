@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, RefreshCw } from 'lucide-react';
+import { ArrowRight, RefreshCw, RotateCcw } from 'lucide-react';
 import { Card } from './card';
 import type { RafPageData } from '@/app/actions/raf';
-import { applyRafTransferSuggestion } from '@/app/actions/settings';
+import { applyRafTransferSuggestion, undoRafTransfer } from '@/app/actions/settings';
 
 interface RafPageContentProps {
   data: RafPageData;
@@ -74,6 +74,20 @@ export function RafPageContent({ data }: RafPageContentProps) {
     });
   };
 
+  const handleUndoTransfer = (transferId: string) => {
+    startTransition(async () => {
+      const result = await undoRafTransfer({ transferId });
+
+      if (!result.success) {
+        setStatus(result.error ?? 'Could not undo transfer.');
+        return;
+      }
+
+      setStatus('Transfer undone. Bucket balances restored for this period.');
+      router.refresh();
+    });
+  };
+
   const bucketStatusColor = (status: string) => {
     if (status === 'EXHAUSTED') return 'text-red-300';
     if (status === 'AT_RISK') return 'text-amber-300';
@@ -125,7 +139,10 @@ export function RafPageContent({ data }: RafPageContentProps) {
             const spent = Number(bucket.spent);
             const allocated = Number(bucket.allocated);
             const remaining = Number(bucket.remaining);
-            const fillPct = allocated > 0 ? Math.min(100, (spent / allocated) * 100) : 0;
+            const hasNoAllocation = allocated <= 0;
+            const fillPct = hasNoAllocation ? 100 : Math.min(100, Math.max(0, (spent / allocated) * 100));
+            const visibleFillPct = hasNoAllocation ? 100 : fillPct === 0 ? 1.5 : Math.max(fillPct, 1.5);
+            const fillClass = hasNoAllocation ? 'bg-slate-500/70' : bucketBarColor(bucket.status);
 
             return (
               <Card key={bucket.categoryId} className="p-3">
@@ -143,8 +160,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-1.5">
                   <div
-                    className={`h-1.5 rounded-full ${bucketBarColor(bucket.status)}`}
-                    style={{ width: `${fillPct}%` }}
+                    className={`h-1.5 rounded-full ${fillClass}`}
+                    style={{ width: `${visibleFillPct}%` }}
                   />
                 </div>
               </Card>
@@ -252,6 +269,48 @@ export function RafPageContent({ data }: RafPageContentProps) {
           <p className={`text-xs ${status.startsWith('Moved') ? 'text-emerald-300' : 'text-amber-300'}`}>
             {status}
           </p>
+        )}
+      </Card>
+
+      {/* Transfer history */}
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Transfer History</h2>
+          <span className="text-[11px] text-muted">Current period only</span>
+        </div>
+
+        {data.transfers.length === 0 ? (
+          <p className="text-xs text-muted">No transfers yet this period.</p>
+        ) : (
+          <div className="space-y-2">
+            {[...data.transfers]
+              .reverse()
+              .map((transfer) => (
+                <div
+                  key={transfer.id}
+                  className="rounded-lg border border-gray-700 px-3 py-2 flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="text-xs text-gray-100">
+                      <span className="font-semibold">${Number(transfer.amount).toFixed(2)}</span>{' '}
+                      {transfer.fromCategoryName} to {transfer.toCategoryName}
+                    </p>
+                    <p className="text-[11px] text-muted">
+                      {new Date(transfer.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUndoTransfer(transfer.id)}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-600 px-2 py-1 text-[11px] text-gray-100 hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    <RotateCcw size={12} />
+                    Undo
+                  </button>
+                </div>
+              ))}
+          </div>
         )}
       </Card>
 

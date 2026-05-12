@@ -8,6 +8,14 @@ import {
   updateTransaction,
   getCurrentPeriodId,
 } from '@/app/actions/transactions';
+import {
+  categorizeImportedTransaction,
+  getBankReviewQueue,
+  getPlaidConnectionStatus,
+  restoreImportedTransaction,
+  skipImportedTransaction,
+  syncPlaidTransactions,
+} from '@/app/actions/plaid';
 import { formatDateDisplay } from '@/lib/utils';
 import { Trash2, Edit2, X, Check } from 'lucide-react';
 
@@ -19,6 +27,19 @@ interface Transaction {
   type: string;
   categoryName?: string;
   categoryId?: string;
+}
+
+interface BankQueueTransaction {
+  id: string;
+  date: string;
+  amount: string;
+  name: string;
+  merchantName?: string;
+  pending: boolean;
+  reviewStatus: string;
+  categoryId?: string;
+  categoryName?: string;
+  includeInRaf: boolean;
 }
 
 export default function TransactionsPage() {
@@ -35,6 +56,12 @@ export default function TransactionsPage() {
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
+  const [bankConnected, setBankConnected] = useState(false);
+  const [bankQueue, setBankQueue] = useState<BankQueueTransaction[]>([]);
+  const [bankCategories, setBankCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [bankStatus, setBankStatus] = useState<string | null>(null);
+  const [bankLoading, setBankLoading] = useState(false);
+  const [bankCategorySelections, setBankCategorySelections] = useState<Record<string, string>>({});
   const hasHydratedOnce = useRef(false);
   const seenTransactionIds = useRef<Set<string>>(new Set());
 
@@ -110,9 +137,33 @@ export default function TransactionsPage() {
     }
   }, [loadTransactionPage]);
 
+  const loadBankQueue = useCallback(async () => {
+    const [connection, queue] = await Promise.all([
+      getPlaidConnectionStatus(),
+      getBankReviewQueue(),
+    ]);
+
+    if (connection.success && connection.data) {
+      setBankConnected(connection.data.connected);
+    }
+
+    if (queue.success && queue.data) {
+      setBankQueue(queue.data.transactions);
+      setBankCategories(queue.data.categories);
+      const nextSelections: Record<string, string> = {};
+      queue.data.transactions.forEach((tx) => {
+        if (tx.categoryId) {
+          nextSelections[tx.id] = tx.categoryId;
+        }
+      });
+      setBankCategorySelections(nextSelections);
+    }
+  }, []);
+
   useEffect(() => {
     loadTransactions();
-  }, [loadTransactions]);
+    void loadBankQueue();
+  }, [loadTransactions, loadBankQueue]);
 
   useEffect(() => {
     const refresh = () => {
@@ -207,6 +258,149 @@ export default function TransactionsPage() {
           <h1 className="text-3xl font-bold">Transactions</h1>
           <p className="text-muted">Manage entries for current period</p>
         </div>
+
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Bank Review Queue</h2>
+              <p className="text-xs text-muted">
+                Pending items are included. Skip is reversible.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!bankConnected || bankLoading}
+              className="text-xs px-3 py-1.5 rounded-md bg-sky-700 hover:bg-sky-600 disabled:opacity-50 text-white"
+              onClick={async () => {
+                setBankLoading(true);
+                setBankStatus(null);
+                const result = await syncPlaidTransactions();
+                if (!result.success) {
+                  setBankStatus(result.error ?? 'Could not sync bank transactions.');
+                } else {
+                  setBankStatus(
+                    `Synced: +${result.data?.added ?? 0} added, ${result.data?.modified ?? 0} updated, ${result.data?.removed ?? 0} removed.`
+                  );
+                  await Promise.all([loadTransactions(), loadBankQueue()]);
+                }
+                setBankLoading(false);
+              }}
+            >
+              {bankLoading ? 'Syncing...' : 'Sync Bank'}
+            </button>
+          </div>
+
+          {!bankConnected ? (
+            <p className="text-xs text-amber-300">No bank connected yet. Plaid Link UI is the next step.</p>
+          ) : bankQueue.length === 0 ? (
+            <p className="text-xs text-muted">No floating transactions to review.</p>
+          ) : (
+            <div className="space-y-2">
+              {bankQueue.map((tx) => {
+                const selectedCategoryId = bankCategorySelections[tx.id] ?? tx.categoryId ?? '';
+                return (
+                  <div key={tx.id} className="rounded-lg border border-gray-700 px-3 py-2 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-100">{tx.merchantName || tx.name}</p>
+                        <p className="text-xs text-muted">
+                          {formatDateDisplay(tx.date)} • ${tx.amount}
+                          {tx.pending ? ' • Pending' : ' • Posted'}
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          {tx.reviewStatus === 'SKIPPED'
+                            ? 'Skipped (excluded from RAF)'
+                            : tx.reviewStatus === 'UNASSIGNED'
+                            ? 'Unassigned (included in RAF)'
+                            : `Categorized: ${tx.categoryName ?? 'Unknown'}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={selectedCategoryId}
+                        onChange={(e) =>
+                          setBankCategorySelections((prev) => ({
+                            ...prev,
+                            [tx.id]: e.target.value,
+                          }))
+                        }
+                        className="rounded-md border border-gray-700 bg-[#2a2a2a] text-xs px-2 py-1.5 text-gray-100"
+                      >
+                        <option value="">Select category</option>
+                        {bankCategories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1.5 rounded-md border border-emerald-700 text-emerald-300 hover:bg-emerald-950/30"
+                        onClick={async () => {
+                          if (!selectedCategoryId) {
+                            setBankStatus('Choose a category first.');
+                            return;
+                          }
+                          const result = await categorizeImportedTransaction({
+                            transactionId: tx.id,
+                            categoryId: selectedCategoryId,
+                          });
+                          if (!result.success) {
+                            setBankStatus(result.error ?? 'Could not categorize transaction.');
+                            return;
+                          }
+                          setBankStatus('Transaction categorized.');
+                          await Promise.all([loadTransactions(), loadBankQueue()]);
+                        }}
+                      >
+                        Categorize
+                      </button>
+
+                      {tx.reviewStatus === 'SKIPPED' ? (
+                        <button
+                          type="button"
+                          className="text-xs px-2 py-1.5 rounded-md border border-sky-700 text-sky-300 hover:bg-sky-950/30"
+                          onClick={async () => {
+                            const result = await restoreImportedTransaction({ transactionId: tx.id });
+                            if (!result.success) {
+                              setBankStatus(result.error ?? 'Could not restore transaction.');
+                              return;
+                            }
+                            setBankStatus('Transaction restored to Unassigned.');
+                            await Promise.all([loadTransactions(), loadBankQueue()]);
+                          }}
+                        >
+                          Restore
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="text-xs px-2 py-1.5 rounded-md border border-amber-700 text-amber-300 hover:bg-amber-950/30"
+                          onClick={async () => {
+                            const result = await skipImportedTransaction({ transactionId: tx.id });
+                            if (!result.success) {
+                              setBankStatus(result.error ?? 'Could not skip transaction.');
+                              return;
+                            }
+                            setBankStatus('Transaction skipped (excluded from RAF).');
+                            await Promise.all([loadTransactions(), loadBankQueue()]);
+                          }}
+                        >
+                          Skip
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {bankStatus && <p className="text-xs text-muted">{bankStatus}</p>}
+        </Card>
 
         {transactions.length === 0 ? (
           <Card className="p-6 text-center text-muted">

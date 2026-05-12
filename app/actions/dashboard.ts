@@ -14,6 +14,7 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import * as plaidRepo from '@/lib/repositories/plaid';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
@@ -250,10 +251,35 @@ export async function getDashboardData(
       const entryDay = startOfDay(entry.date);
       return entryDay >= periodStart && entryDay <= periodEnd;
     });
-    const [categories, periodTransfers] = await Promise.all([
+    const [importedEntries, categories, periodTransfers] = await Promise.all([
+      plaidRepo.getIncludedImportedTransactionsForDateRange(resolvedUserId, periodStart, periodEnd),
       categoriesRepo.getCategoriesForUser(resolvedUserId),
       rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
     ]);
+
+    const currentEntriesWithImported = [
+      ...currentEntries,
+      ...importedEntries.map((entry) => ({
+        id: entry.id,
+        userId: resolvedUserId,
+        periodId: currentPeriod.id,
+        date: entry.date,
+        amount: entry.amount,
+        categoryId: entry.categoryId ?? '',
+        entryType: 'EXPENSE',
+        source: 'plaid',
+        description: entry.name,
+        tags: [],
+        forecastStrategy: 'UNKNOWN',
+        nextOccurrence: null,
+        isProvisional: entry.pending,
+        createdAt: entry.date,
+        updatedAt: entry.date,
+        category: undefined,
+        savingsAllocations: [],
+        notes: [],
+      })),
+    ];
     const categoryMap = new Map<
       string,
       {
@@ -274,9 +300,9 @@ export async function getDashboardData(
     });
 
     // Calculate current period metrics
-    const currentIncome = calculateIncome(currentEntries);
-    const currentSpending = calculateTotalSpending(currentEntries, categoryMap);
-    const currentSavings = calculateSavingsTransfers(currentEntries, categoryMap);
+    const currentIncome = calculateIncome(currentEntriesWithImported);
+    const currentSpending = calculateTotalSpending(currentEntriesWithImported, categoryMap);
+    const currentSavings = calculateSavingsTransfers(currentEntriesWithImported, categoryMap);
     const currentCashEnding = calculateExpectedCash(
       currentPeriod.openingCash,
       currentIncome,
@@ -329,7 +355,7 @@ export async function getDashboardData(
 
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
-      entries: currentEntries.map((entry) => ({
+      entries: currentEntriesWithImported.map((entry) => ({
         categoryId: entry.categoryId,
         amount: entry.amount,
       })),
@@ -358,7 +384,7 @@ export async function getDashboardData(
     weeklyWindowStart.setDate(weeklyWindowStart.getDate() - 6);
     const weeklySpendByCategory = new Map<string, Decimal>();
 
-    currentEntries.forEach((entry) => {
+    currentEntriesWithImported.forEach((entry) => {
       if (!entry.categoryId) return;
       const entryDay = startOfDay(entry.date);
       if (entryDay < weeklyWindowStart || entryDay > today) return;

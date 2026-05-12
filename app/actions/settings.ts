@@ -212,3 +212,49 @@ export async function applyRafTransferSuggestion(input: {
     };
   }
 }
+
+export async function undoRafTransfer(input: {
+  transferId: string;
+  userId?: string;
+}): Promise<ApiResponse<{ undone: boolean }>> {
+  try {
+    const resolvedUserId = await usersRepo.resolveUserId(input.userId);
+    const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
+
+    if (!currentPeriod) {
+      return {
+        success: false,
+        error: 'No current period found.',
+      };
+    }
+
+    const result = await rafTransfersRepo.deleteRafTransferById(
+      resolvedUserId,
+      input.transferId,
+      currentPeriod.id
+    );
+
+    if (result.count === 0) {
+      return {
+        success: false,
+        error: 'Transfer not found in the current period.',
+      };
+    }
+
+    revalidatePath('/');
+    revalidatePath('/settings');
+    revalidatePath('/raf');
+
+    return {
+      success: true,
+      data: {
+        undone: true,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}

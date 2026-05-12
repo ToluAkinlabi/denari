@@ -6,6 +6,7 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import * as plaidRepo from '@/lib/repositories/plaid';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome } from '@/lib/finance/wealth';
 import { applyRafPeriodTransfers, calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
@@ -17,6 +18,15 @@ export interface RafPageData {
   income: string;
   hasIncome: boolean;
   raf: RafPlan;
+  transfers: Array<{
+    id: string;
+    fromCategoryId: string;
+    fromCategoryName: string;
+    toCategoryId: string;
+    toCategoryName: string;
+    amount: string;
+    createdAt: string;
+  }>;
   categories: Array<{
     id: string;
     name: string;
@@ -41,17 +51,30 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
       return { success: false, error: 'No current period found' };
     }
 
-    const [currentEntries, categories, periodTransfers] = await Promise.all([
+    const periodStart = startOfDay(new Date(currentPeriod.startDate));
+    const periodEnd = startOfDay(new Date(currentPeriod.endDate));
+
+    const [currentEntries, importedEntries, categories, periodTransfers] = await Promise.all([
       ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id),
+      plaidRepo.getIncludedImportedTransactionsForDateRange(resolvedUserId, periodStart, periodEnd),
       categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
-      rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
+      rafTransfersRepo.getRafTransfersForPeriodDetailed(resolvedUserId, currentPeriod.id),
     ]);
 
-    const currentIncome = calculateIncome(currentEntries);
+    const allEntries = [
+      ...currentEntries,
+      ...importedEntries.map((entry) => ({
+        categoryId: entry.categoryId ?? '',
+        amount: entry.amount,
+        entryType: 'EXPENSE',
+      })),
+    ];
+
+    const currentIncome = calculateIncome(allEntries);
 
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
-      entries: currentEntries.map((e) => ({ categoryId: e.categoryId, amount: e.amount })),
+      entries: allEntries.map((e) => ({ categoryId: e.categoryId, amount: e.amount })),
       categories: categories.map((c) => ({
         id: c.id,
         name: c.name,
@@ -70,8 +93,6 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
       }))
     );
 
-    const periodStart = startOfDay(new Date(currentPeriod.startDate));
-    const periodEnd = startOfDay(new Date(currentPeriod.endDate));
     const today = startOfDay(new Date());
     const totalDays = differenceInCalendarDays(periodEnd, periodStart) + 1;
     const daysElapsed = Math.max(0, Math.min(differenceInCalendarDays(today, periodStart) + 1, totalDays));
@@ -96,6 +117,15 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         income: currentIncome.toFixed(2),
         hasIncome: currentIncome.greaterThan(0),
         raf: rafPlan,
+        transfers: periodTransfers.map((transfer) => ({
+          id: transfer.id,
+          fromCategoryId: transfer.fromCategoryId,
+          fromCategoryName: transfer.fromCategory.name,
+          toCategoryId: transfer.toCategoryId,
+          toCategoryName: transfer.toCategory.name,
+          amount: transfer.amount.toFixed(2),
+          createdAt: transfer.createdAt.toISOString(),
+        })),
         categories: categories
           .filter((c) => c.type !== 'INCOME')
           .map((c) => ({

@@ -8,6 +8,27 @@ export async function getRafTransfersForPeriod(userId: string, periodId: string)
   });
 }
 
+export async function getRafTransfersForPeriodDetailed(userId: string, periodId: string) {
+  return prisma.rafTransfer.findMany({
+    where: { userId, periodId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      fromCategory: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      toCategory: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}
+
 export async function createRafTransfer(input: {
   userId: string;
   periodId: string;
@@ -25,5 +46,15 @@ export async function createRafTransfer(input: {
       amount: new Prisma.Decimal(input.amount),
       note: input.note,
     },
+  });
+}
+
+export async function deleteRafTransferById(userId: string, transferId: string, periodId?: string) {
+  const where = periodId
+    ? { id: transferId, userId, periodId }
+    : { id: transferId, userId };
+
+  return prisma.rafTransfer.deleteMany({
+    where,
   });
 }

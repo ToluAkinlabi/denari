@@ -237,7 +237,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </Card>
       </Link>
 
-      <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-700 bg-red-950/50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-700 bg-yellow-950/40' : 'border-green-700 bg-green-950/40'}`}>
+      <Card className={`p-4 mt-4 ${data.paceMetrics.status === 'RED' ? 'border-red-700 bg-red-950/50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-700 bg-yellow-950/40' : 'border-green-700 bg-green-950/40'}`}>
         <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
