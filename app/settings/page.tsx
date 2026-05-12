@@ -1,14 +1,9 @@
 import { Card } from '@/components/card';
 import { Bell, Moon, HelpCircle, LogOut } from 'lucide-react';
-import { getCategoryForecastSettings } from '@/app/actions/settings';
-import { SettingsForecastControls } from '@/app/components/settings-forecast-controls';
 import { SettingsDataActions } from '@/app/components/settings-data-actions';
 import { SettingsBankConnection } from '@/app/components/settings-bank-connection';
 
 export default async function SettingsPage() {
-  const settingsResult = await getCategoryForecastSettings();
-  const forecastSettings = settingsResult.success && settingsResult.data ? settingsResult.data : [];
-
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6">
       <div className="space-y-6 pb-10">
@@ -51,8 +46,6 @@ export default async function SettingsPage() {
         <SettingsBankConnection />
 
         <SettingsDataActions />
-
-        <SettingsForecastControls initialSettings={forecastSettings} />
 
         {/* Support */}
         <div>
