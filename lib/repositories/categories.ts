@@ -96,6 +96,7 @@ export async function createCategory(data: {
   color: string;
   countsAsExpense: boolean;
   countsAsSavings: boolean;
+  rafPercent?: Prisma.CategoryUncheckedCreateInput['rafPercent'];
   icon?: string;
   defaultStrategy?: Prisma.CategoryUncheckedCreateInput['defaultStrategy'];
   expectedFrequency?: string;
@@ -121,6 +122,7 @@ export async function getCategoryForecastSettingsForUser(userId: string) {
       isDiscretionary: true,
       countsAsExpense: true,
       countsAsSavings: true,
+      rafPercent: true,
       type: true,
     },
   });
@@ -136,6 +138,7 @@ export async function updateCategoryForecastSettings(
     defaultStrategy: Prisma.CategoryUpdateInput['defaultStrategy'];
     expectedFrequency: string;
     isDiscretionary: boolean;
+    rafPercent?: Prisma.CategoryUpdateInput['rafPercent'];
   }
 ) {
   return prisma.category.updateMany({

@@ -18,6 +18,7 @@ import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
 import { calculateTotalSpending } from '@/lib/finance/spending';
 import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
+import { calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
 import {
   calculateIncome,
   calculateSavingsTransfers,
@@ -99,6 +100,19 @@ export interface DashboardData {
       percentage: string;
     }>;
   };
+  raf: RafPlan;
+  rafWeeklyTrend: {
+    periodProgressPercent: string;
+    topOverspendBucket: string;
+    buckets: Array<{
+      name: string;
+      plannedToDate: string;
+      actualSpent: string;
+      variance: string;
+      weeklySpend: string;
+      status: 'UNDER' | 'ON_TRACK' | 'OVER';
+    }>;
+  };
   scorecard: {
     overall: string;
     grade: string;
@@ -130,6 +144,8 @@ export interface DashboardData {
     summary: string;
     model: string;
     generatedAt: string;
+    reliability: 'HIGH' | 'MEDIUM' | 'LOW';
+    reliabilityReason: string;
   };
   comparison?: {
     type: 'PREVIOUS' | 'AVERAGE';
@@ -305,6 +321,82 @@ export async function getDashboardData(
       expectedSpend: expectedSpend.toFixed(2),
       actualSpend: currentSpending.toFixed(2),
       status: paceStatus,
+    };
+
+    const rafPlan = calculateRafPlan({
+      income: currentIncome,
+      entries: currentEntries.map((entry) => ({
+        categoryId: entry.categoryId,
+        amount: entry.amount,
+      })),
+      categories: categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        type: category.type,
+        countsAsExpense: category.countsAsExpense ?? false,
+        countsAsSavings: category.countsAsSavings ?? false,
+        rafPercent: category.rafPercent,
+      })),
+    });
+
+    const periodProgressRatio = paceMetrics.totalDays > 0
+      ? new Decimal(paceMetrics.day).dividedBy(paceMetrics.totalDays)
+      : new Decimal(0);
+    const weeklyWindowStart = new Date(today);
+    weeklyWindowStart.setDate(weeklyWindowStart.getDate() - 6);
+    const weeklySpendByCategory = new Map<string, Decimal>();
+
+    currentEntries.forEach((entry) => {
+      if (!entry.categoryId) return;
+      const entryDay = startOfDay(entry.date);
+      if (entryDay < weeklyWindowStart || entryDay > today) return;
+      const current = weeklySpendByCategory.get(entry.categoryId) || new Decimal(0);
+      weeklySpendByCategory.set(entry.categoryId, current.plus(new Decimal(String(entry.amount))));
+    });
+
+    const rafWeeklyTrendBuckets = rafPlan.buckets.map((bucket) => {
+      const allocated = new Decimal(bucket.allocated);
+      const spent = new Decimal(bucket.spent);
+      const plannedToDate = allocated.times(periodProgressRatio);
+      const variance = spent.minus(plannedToDate);
+      const tolerance = Decimal.max(allocated.times(0.05), new Decimal(10));
+      const weeklySpend = weeklySpendByCategory.get(bucket.categoryId) || new Decimal(0);
+      const status: 'UNDER' | 'ON_TRACK' | 'OVER' = variance.greaterThan(tolerance)
+        ? 'OVER'
+        : variance.lessThan(tolerance.negated())
+        ? 'UNDER'
+        : 'ON_TRACK';
+
+      return {
+        name: bucket.name,
+        plannedToDate: plannedToDate.toFixed(2),
+        actualSpent: spent.toFixed(2),
+        variance: variance.toFixed(2),
+        weeklySpend: weeklySpend.toFixed(2),
+        status,
+        sortKey: variance.toNumber(),
+      };
+    });
+
+    const topOverspend = [...rafWeeklyTrendBuckets]
+      .filter((bucket) => bucket.status === 'OVER')
+      .sort((left, right) => right.sortKey - left.sortKey)[0];
+    const rafWeeklyTrend = {
+      periodProgressPercent: periodProgressRatio.times(100).toFixed(1),
+      topOverspendBucket: topOverspend
+        ? `${topOverspend.name} (+$${new Decimal(topOverspend.variance).toFixed(2)} vs plan)`
+        : 'No RAF bucket is currently above planned pace.',
+      buckets: rafWeeklyTrendBuckets
+        .sort((left, right) => right.sortKey - left.sortKey)
+        .slice(0, 5)
+        .map((bucket) => ({
+          name: bucket.name,
+          plannedToDate: bucket.plannedToDate,
+          actualSpent: bucket.actualSpent,
+          variance: bucket.variance,
+          weeklySpend: bucket.weeklySpend,
+          status: bucket.status,
+        })),
     };
 
     // Category breakdown - lifetime totals across all user entries
@@ -538,6 +630,15 @@ export async function getDashboardData(
       }
     }
 
+    const guidanceConfidence = getRafGuidanceConfidence({
+      profileSource: rafPlan.profileSource,
+      warningCount: rafPlan.warnings.length,
+      exhaustedCount: rafPlan.exhaustedBuckets.length,
+      atRiskCount: rafPlan.atRiskBuckets.length,
+      historyPeriods: recentPeriods.length,
+      forecastConfidence: forecast.confidence,
+    });
+
     const partnershipContribution = currentEntries
       .filter((entry) => {
         if (!entry.categoryId) return false;
@@ -566,6 +667,11 @@ export async function getDashboardData(
     const forecastLikelyCash = new Decimal(forecast.nextEndingCash || '0');
     const scenarioRiskCash = forecastLikelyCash.minus(scenarioExtraSpend);
     const scenarioLiquidityCash = forecastLikelyCash.plus(scenarioSkipSavings).plus(scenarioSkipPartnership);
+    const daysRemaining = Math.max(1, paceMetrics.totalDays - paceMetrics.day);
+    const spendBucket = rafPlan.buckets.find((bucket) => bucket.name.toLowerCase() === 'spend');
+    const spendRemaining = spendBucket ? new Decimal(spendBucket.remaining) : new Decimal(0);
+    const suggestedDailySpendCap = Decimal.max(spendRemaining.dividedBy(daysRemaining), new Decimal(0));
+    const priorityBucket = rafPlan.exhaustedBuckets[0] ?? rafPlan.atRiskBuckets[0] ?? rafPlan.buckets[0];
 
     // Comparison
     let comparison: DashboardData['comparison'] | undefined;
@@ -642,6 +748,36 @@ export async function getDashboardData(
       scenarioSkipPartnership: scenarioSkipPartnership.toFixed(2),
       scenarioRiskCash: scenarioRiskCash.toFixed(2),
       scenarioLiquidityCash: scenarioLiquidityCash.toFixed(2),
+      daysRemaining,
+      suggestedDailySpendCap: suggestedDailySpendCap.toFixed(2),
+      priorityBucketName: priorityBucket?.name ?? 'Spend',
+      priorityBucketRemaining: priorityBucket?.remaining ?? '0.00',
+      priorityBucketStatus: priorityBucket?.status ?? 'OPEN',
+      guidanceConfidence: guidanceConfidence.level,
+      guidanceConfidenceReason: guidanceConfidence.reason,
+      weeklyTrendSummary: rafWeeklyTrend.topOverspendBucket,
+      weeklyTrendBuckets: rafWeeklyTrend.buckets
+        .map((bucket) => `${bucket.name}: weekly $${bucket.weeklySpend}, variance $${bucket.variance}`)
+        .join(' | '),
+      transferSuggestionSummary: rafPlan.transferSuggestions
+        .map((item) => `$${item.amount} ${item.fromBucket}->${item.toBucket}`)
+        .join(' | '),
+      rafProfileSource: rafPlan.profileSource,
+      rafTotalPercent: rafPlan.totalPercent,
+      rafAllocated: rafPlan.allocated,
+      rafUnallocated: rafPlan.unallocated,
+      rafOverallocated: rafPlan.overallocated,
+      rafTopBuckets: rafPlan.buckets
+        .slice(0, 4)
+        .map((bucket) => `${bucket.name}: ${bucket.remaining} left of ${bucket.allocated}`)
+        .join(' | '),
+      rafAtRiskBuckets: rafPlan.atRiskBuckets
+        .map((bucket) => `${bucket.name}: ${bucket.remaining} left`)
+        .join(' | '),
+      rafExhaustedBuckets: rafPlan.exhaustedBuckets
+        .map((bucket) => `${bucket.name}: exhausted`) 
+        .join(' | '),
+      rafWarnings: rafPlan.warnings,
     });
 
     const dashboardData: DashboardData = {
@@ -675,6 +811,8 @@ export async function getDashboardData(
         totalSavings: currentSavings.toFixed(2),
         buckets: savingsData,
       },
+      raf: rafPlan,
+      rafWeeklyTrend,
       scorecard: {
         overall: scorecard.toFixed(1),
         grade: gradeScore(scorecard),
@@ -686,7 +824,11 @@ export async function getDashboardData(
         categoryDiscipline: categoryDiscipline.toFixed(1),
       },
       forecast,
-      aiInsight,
+      aiInsight: {
+        ...aiInsight,
+        reliability: guidanceConfidence.level,
+        reliabilityReason: guidanceConfidence.reason,
+      },
       comparison,
     };
 

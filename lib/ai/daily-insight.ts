@@ -24,6 +24,25 @@ export interface DailyInsightInput {
   scenarioSkipPartnership: string;
   scenarioRiskCash: string;
   scenarioLiquidityCash: string;
+  daysRemaining: number;
+  suggestedDailySpendCap: string;
+  priorityBucketName: string;
+  priorityBucketRemaining: string;
+  priorityBucketStatus: string;
+  guidanceConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  guidanceConfidenceReason: string;
+  weeklyTrendSummary: string;
+  weeklyTrendBuckets: string;
+  transferSuggestionSummary: string;
+  rafProfileSource: string;
+  rafTotalPercent: string;
+  rafAllocated: string;
+  rafUnallocated: string;
+  rafOverallocated: string;
+  rafTopBuckets: string;
+  rafAtRiskBuckets: string;
+  rafExhaustedBuckets: string;
+  rafWarnings: string[];
 }
 
 export interface DailyInsightResult {
@@ -40,11 +59,11 @@ function fallbackInsight(input: DailyInsightInput): string {
       ? 'Your pace is close to plan.'
       : 'Your pace is under control.';
 
-  const cautionText = input.forecastWarnings.length > 0
-    ? `${input.forecastWarnings.length} caution flag${input.forecastWarnings.length === 1 ? '' : 's'} are active.`
-    : 'No immediate caution flags are active.';
+  const rafText = input.rafWarnings.length > 0
+    ? ` RAF is ${input.rafProfileSource.toLowerCase()} and has ${input.rafWarnings.length} warning${input.rafWarnings.length === 1 ? '' : 's'}.`
+    : ` RAF is ${input.rafProfileSource.toLowerCase()} with ${input.rafTotalPercent}% allocated across buckets.`;
 
-  return `${paceLabel} If you add about $${input.scenarioExtraSpend} of unplanned spend, next-period ending cash may land near $${input.scenarioRiskCash}. Keeping savings and partnership commitments protects discipline, while skipping up to $${input.scenarioSkipSavings} savings and $${input.scenarioSkipPartnership} partnership would raise short-term liquidity to around $${input.scenarioLiquidityCash}. ${cautionText}`;
+  return `${paceLabel}${rafText} Guidance confidence is ${input.guidanceConfidence.toLowerCase()} (${input.guidanceConfidenceReason}). Protect ${input.priorityBucketName} first (${input.priorityBucketStatus.toLowerCase()} with $${input.priorityBucketRemaining} left), and keep discretionary spend near $${input.suggestedDailySpendCap}/day for the next ${input.daysRemaining} day(s). Weekly pressure signal: ${input.weeklyTrendSummary}; transfer idea: ${input.transferSuggestionSummary || 'none'}.`;
 }
 
 async function generateInsightWithClaude(input: DailyInsightInput): Promise<DailyInsightResult> {
@@ -65,13 +84,13 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
     'Do not invent numbers. Use only the values provided below.',
     'Do not simply restate all totals; convert them into guidance and trade-offs.',
     'Always include at least 4 numeric values in the response.',
-    'Use a single timeframe: next pay period projection. Do not mix "today" outcomes with next-period outcomes.',
+    'Use a single timeframe: this pay period plus the next-period projection. Do not mix unrelated horizons.',
     'Treat scenario amounts as bounded what-if adjustments, not recommendations to skip commitments.',
     'Keep tone practical, plain English, and action-first.',
-    'Sentence 1: trend view using recent 3-period averages vs current pace.',
-    'Sentence 2: explicit if/then scenario using bounded extra spend and resulting next-period ending cash.',
-    'Sentence 3: one concrete action for the next 24 hours with a spend cap and a minimum savings/partnership protection amount.',
-    'Sentence 4: if warnings exist, mention the highest-risk warning in plain language and tie it to Sentence 3 action.',
+    'Sentence 1: RAF status plus pace view. State total RAF percentage, allocated income, unallocated/overallocated cash, and current pace.',
+    'Sentence 2: call out the weekly RAF pressure trend and the most pressured buckets by name.',
+    'Sentence 3: one concrete next-24-hour action that protects the priority bucket and uses the provided spend-cap guidance.',
+    'Sentence 4: mention guidance confidence, one transfer suggestion if available, and tie it to the action.',
     'Avoid phrases like "skip commitments" unless clearly marked as emergency-only and temporary.',
     '',
     `Current period: day ${input.periodDay} of ${input.totalDays}`,
@@ -90,6 +109,25 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
     `Average income across last 3 periods: ~$${input.avgRecentIncome}`,
     `Average spending across last 3 periods: ~$${input.avgRecentSpending}`,
     `Average savings across last 3 periods: ~$${input.avgRecentSavings}`,
+    `RAF profile source: ${input.rafProfileSource}`,
+    `RAF total percent: ${input.rafTotalPercent}%`,
+    `RAF allocated from current income: $${input.rafAllocated}`,
+    `RAF unallocated cash: $${input.rafUnallocated}`,
+    `RAF overallocated amount: $${input.rafOverallocated}`,
+    `Days remaining in period: ${input.daysRemaining}`,
+    `Suggested daily discretionary spend cap: $${input.suggestedDailySpendCap}`,
+    `Priority bucket to protect: ${input.priorityBucketName}`,
+    `Priority bucket status: ${input.priorityBucketStatus}`,
+    `Priority bucket remaining: $${input.priorityBucketRemaining}`,
+    `Guidance confidence: ${input.guidanceConfidence}`,
+    `Guidance confidence reason: ${input.guidanceConfidenceReason}`,
+    `Weekly RAF trend summary: ${input.weeklyTrendSummary}`,
+    `Weekly RAF trend buckets: ${input.weeklyTrendBuckets || 'none'}`,
+    `Safe transfer suggestions: ${input.transferSuggestionSummary || 'none'}`,
+    `RAF top buckets: ${input.rafTopBuckets || 'none'}`,
+    `RAF at-risk buckets: ${input.rafAtRiskBuckets || 'none'}`,
+    `RAF exhausted buckets: ${input.rafExhaustedBuckets || 'none'}`,
+    `RAF warnings: ${input.rafWarnings.length > 0 ? input.rafWarnings.join(' | ') : 'none'}`,
     `Scenario extra spend today: +$${input.scenarioExtraSpend}`,
     `Scenario skip savings amount: $${input.scenarioSkipSavings}`,
     `Scenario skip partnership amount: $${input.scenarioSkipPartnership}`,

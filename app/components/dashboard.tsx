@@ -27,6 +27,42 @@ export function DashboardContent({ data }: DashboardContentProps) {
       : data.paceMetrics.status === 'RED'
       ? 'text-red-400'
       : 'text-amber-300';
+  const paceCardAccentClass =
+    data.paceMetrics.status === 'GREEN'
+      ? 'border-green-700 bg-green-950/40'
+      : data.paceMetrics.status === 'RED'
+      ? 'border-red-700 bg-red-950/40'
+      : 'border-yellow-700 bg-yellow-950/40';
+  const aiModelBadgeClass =
+    data.paceMetrics.status === 'GREEN'
+      ? 'bg-green-900 text-green-300'
+      : data.paceMetrics.status === 'RED'
+      ? 'bg-red-900 text-red-300'
+      : 'bg-yellow-900 text-yellow-300';
+  const aiSummaryClass =
+    data.paceMetrics.status === 'GREEN'
+      ? 'text-green-100'
+      : data.paceMetrics.status === 'RED'
+      ? 'text-red-100'
+      : 'text-yellow-100';
+  const aiReliabilityClass =
+    data.aiInsight.reliability === 'HIGH'
+      ? 'bg-green-900 text-green-300'
+      : data.aiInsight.reliability === 'LOW'
+      ? 'bg-red-900 text-red-300'
+      : 'bg-amber-900 text-amber-300';
+  const rafCardAccentClass =
+    data.raf.exhaustedBuckets.length > 0
+      ? 'border-red-700 bg-red-950/40'
+      : data.raf.atRiskBuckets.length > 0
+      ? 'border-yellow-700 bg-yellow-950/40'
+      : 'border-green-700 bg-green-950/40';
+  const rafHeadlineClass =
+    data.raf.exhaustedBuckets.length > 0
+      ? 'text-red-300'
+      : data.raf.atRiskBuckets.length > 0
+      ? 'text-amber-300'
+      : 'text-green-300';
   const wealthChange = Number(data.wealthMetrics.created);
   const isSpenddown = !data.wealthMetrics.isNegative && wealthChange < 0;
   const paceWidthClass =
@@ -165,6 +201,91 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
+      <Card className={`p-4 ${rafCardAccentClass}`}>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h3 className="text-sm font-semibold">RAF Allocation</h3>
+          <span className={`text-[10px] px-2 py-0.5 rounded uppercase tracking-wide ${rafHeadlineClass} bg-black/20`}>
+            {data.raf.profileSource.toLowerCase()}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
+            <p className="text-muted">Allocated</p>
+            <p className="font-semibold text-emerald-400">${data.raf.allocated}</p>
+          </div>
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
+            <p className="text-muted">Unallocated</p>
+            <p className="font-semibold text-amber-300">${data.raf.unallocated}</p>
+          </div>
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
+            <p className="text-muted">Total RAF %</p>
+            <p className="font-semibold text-sky-300">{data.raf.totalPercent}%</p>
+          </div>
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
+            <p className="text-muted">Overallocated</p>
+            <p className="font-semibold text-red-300">${data.raf.overallocated}</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {data.raf.buckets.slice(0, 4).map((bucket) => (
+            <div key={bucket.categoryId} className="rounded-lg border border-gray-700 px-3 py-2 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{bucket.name}</p>
+                <p className="text-[10px] text-muted">{bucket.percent} of income · {bucket.status.toLowerCase().replace('_', ' ')}</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-sm font-semibold ${bucket.status === 'EXHAUSTED' ? 'text-red-300' : bucket.status === 'AT_RISK' ? 'text-amber-300' : 'text-green-300'}`}>
+                  ${bucket.remaining} left
+                </p>
+                <p className="text-[10px] text-muted">${bucket.spent} spent / ${bucket.allocated} allocated</p>
+              </div>
+            </div>
+          ))}
+
+          <div className="rounded-lg border border-gray-700 px-3 py-2">
+            <p className="text-xs font-semibold text-gray-200 mb-1">Weekly RAF Trend ({data.rafWeeklyTrend.periodProgressPercent}% period progress)</p>
+            <p className="text-xs text-amber-200 mb-2">{data.rafWeeklyTrend.topOverspendBucket}</p>
+            <div className="space-y-1">
+              {data.rafWeeklyTrend.buckets.slice(0, 3).map((bucket) => (
+                <div key={bucket.name} className="flex items-center justify-between text-[11px] text-gray-300">
+                  <span>{bucket.name}</span>
+                  <span className={bucket.status === 'OVER' ? 'text-red-300' : bucket.status === 'UNDER' ? 'text-green-300' : 'text-amber-300'}>
+                    {bucket.status} ({bucket.variance.startsWith('-') ? '' : '+'}${bucket.variance})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {data.raf.transferSuggestions.length > 0 && (
+            <div className="rounded-lg border border-sky-700/40 bg-sky-950/20 px-3 py-2">
+              <p className="text-xs font-semibold text-sky-200 mb-1">Suggested RAF Rebalance</p>
+              <ul className="space-y-1">
+                {data.raf.transferSuggestions.slice(0, 2).map((item) => (
+                  <li key={`${item.fromBucket}-${item.toBucket}-${item.amount}`} className="text-xs text-sky-100">
+                    • Move about ${item.amount} from {item.fromBucket} to {item.toBucket}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {data.raf.warnings.length > 0 && (
+            <div className="rounded-lg border border-yellow-700/40 bg-yellow-950/20 px-3 py-2">
+              <p className="text-xs font-semibold text-yellow-200 mb-1">
+                {data.raf.warnings.length} RAF warning{data.raf.warnings.length === 1 ? '' : 's'}
+              </p>
+              <ul className="space-y-1">
+                {data.raf.warnings.slice(0, 3).map((warning) => (
+                  <li key={warning} className="text-xs text-yellow-100">• {warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </Card>
+
       <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-700 bg-red-950/50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-700 bg-yellow-950/40' : 'border-green-700 bg-green-950/40'}`}>
         <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
         <div className="space-y-3">
@@ -229,21 +350,36 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card id="daily-ai-briefing" className="p-4 bg-[#232323]">
+      <Card id="daily-ai-briefing" className={`p-4 ${paceCardAccentClass}`}>
         <h3 className="text-sm font-semibold mb-3">
           Daily AI Briefing{' '}
-          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
-            data.forecast.confidence === 'HIGH' ? 'bg-emerald-900 text-emerald-300' :
-            data.forecast.confidence === 'MEDIUM' ? 'bg-gray-700 text-gray-200' :
-            'bg-amber-900 text-amber-300'
-          }`}>
+          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${aiModelBadgeClass}`}>
             {data.aiInsight.model}
+          </span>
+          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${aiReliabilityClass}`}>
+            {data.aiInsight.reliability} confidence
           </span>
         </h3>
         <div className="space-y-3">
-          <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+          <p className={`text-sm leading-relaxed ${aiSummaryClass}`}>
             {data.aiInsight.summary}
           </p>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
+              <p className="text-muted">RAF Profile</p>
+              <p className="font-semibold text-sky-300">{data.raf.profileSource}</p>
+            </div>
+            <div className="rounded-lg border border-gray-700 px-2 py-2">
+              <p className="text-muted">Bucket Pressure</p>
+              <p className="font-semibold text-amber-300">{data.raf.exhaustedBuckets.length + data.raf.atRiskBuckets.length} at risk</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 px-2 py-2">
+            <p className="text-muted text-xs">Reliability Note</p>
+            <p className="text-xs text-gray-200">{data.aiInsight.reliabilityReason}</p>
+          </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-lg border border-gray-700 px-2 py-2">
@@ -265,13 +401,31 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
 
           {data.forecast.warnings.length > 0 && (
-            <div className="rounded-lg border border-amber-300/40 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
-              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-1">
+            <div className={`rounded-lg px-3 py-2 ${
+              data.paceMetrics.status === 'GREEN'
+                ? 'border border-green-300/40 bg-green-950/20'
+                : data.paceMetrics.status === 'RED'
+                ? 'border border-red-300/40 bg-red-950/20'
+                : 'border border-yellow-300/40 bg-yellow-950/20'
+            }`}>
+              <p className={`text-xs font-semibold mb-1 ${
+                data.paceMetrics.status === 'GREEN'
+                  ? 'text-green-200'
+                  : data.paceMetrics.status === 'RED'
+                  ? 'text-red-200'
+                  : 'text-yellow-200'
+              }`}>
                 {data.forecast.warnings.length} caution flag{data.forecast.warnings.length === 1 ? '' : 's'} to act on
               </p>
               <ul className="space-y-1">
                 {data.forecast.warnings.slice(0, 2).map((warning) => (
-                  <li key={warning} className="text-xs text-amber-900 dark:text-amber-200">
+                  <li key={warning} className={`text-xs ${
+                    data.paceMetrics.status === 'GREEN'
+                      ? 'text-green-100'
+                      : data.paceMetrics.status === 'RED'
+                      ? 'text-red-100'
+                      : 'text-yellow-100'
+                  }`}>
                     • {warning}
                   </li>
                 ))}

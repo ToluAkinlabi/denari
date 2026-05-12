@@ -36,6 +36,7 @@ model Category {
   icon                 String  @default("Wallet")
   countsAsExpense      Boolean @default(false)
   countsAsSavings      Boolean @default(false)
+  rafPercent           Decimal @default(0) @db.Decimal(5, 2)
   
   // Forecasting configuration
   defaultStrategy      ForecastStrategy @default(UNKNOWN)

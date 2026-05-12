@@ -229,21 +229,22 @@ async function ensureDefaultCategories(userId: string) {
     color: string;
     countsAsExpense: boolean;
     countsAsSavings: boolean;
+    rafPercent: number;
     defaultStrategy: 'KNOWN_RECURRING' | 'KNOWN_VARIABLE' | 'KNOWN_IRREGULAR' | 'UNKNOWN' | 'ONE_TIME';
     expectedFrequency: string;
     isDiscretionary: boolean;
   }> = [
-    { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', countsAsExpense: false, countsAsSavings: false, defaultStrategy: 'KNOWN_RECURRING', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
-    { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
-    { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
-    { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
-    { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
-    { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: false },
-    { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: true },
-    { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: true },
-    { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
-    { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
-    { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', countsAsExpense: false, countsAsSavings: true, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', countsAsExpense: false, countsAsSavings: false, rafPercent: 0, defaultStrategy: 'KNOWN_RECURRING', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', countsAsExpense: true, countsAsSavings: false, rafPercent: 5, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', countsAsExpense: true, countsAsSavings: false, rafPercent: 28, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
+    { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', countsAsExpense: true, countsAsSavings: false, rafPercent: 4, defaultStrategy: 'KNOWN_IRREGULAR', expectedFrequency: 'MONTHLY', isDiscretionary: false },
+    { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', countsAsExpense: true, countsAsSavings: false, rafPercent: 10, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', countsAsExpense: true, countsAsSavings: false, rafPercent: 3, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: false },
+    { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', countsAsExpense: true, countsAsSavings: false, rafPercent: 15, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: true },
+    { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', countsAsExpense: true, countsAsSavings: false, rafPercent: 5, defaultStrategy: 'UNKNOWN', expectedFrequency: 'VARIABLE', isDiscretionary: true },
+    { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', countsAsExpense: true, countsAsSavings: false, rafPercent: 15, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', countsAsExpense: false, countsAsSavings: true, rafPercent: 10, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
+    { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', countsAsExpense: false, countsAsSavings: true, rafPercent: 5, defaultStrategy: 'KNOWN_VARIABLE', expectedFrequency: 'BIWEEKLY', isDiscretionary: false },
   ];
 
   const existing = await categoriesRepo.getCategoriesForUser(userId);

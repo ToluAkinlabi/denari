@@ -11,6 +11,7 @@ type CategoryForecastSetting = {
   defaultStrategy: ForecastStrategy;
   expectedFrequency: string;
   isDiscretionary: boolean;
+  rafPercent: number;
   countsAsExpense: boolean;
   countsAsSavings: boolean;
   type: string;
@@ -46,7 +47,9 @@ export function SettingsForecastControls({ initialSettings }: Props) {
 
   const onUpdate = (
     categoryId: string,
-    patch: Partial<Pick<CategoryForecastSetting, 'defaultStrategy' | 'expectedFrequency' | 'isDiscretionary'>>
+    patch: Partial<
+      Pick<CategoryForecastSetting, 'defaultStrategy' | 'expectedFrequency' | 'isDiscretionary' | 'rafPercent'>
+    >
   ) => {
     setSettings((prev) => prev.map((item) => (item.id === categoryId ? { ...item, ...patch } : item)));
 
@@ -64,6 +67,7 @@ export function SettingsForecastControls({ initialSettings }: Props) {
         defaultStrategy: next.defaultStrategy,
         expectedFrequency: next.expectedFrequency,
         isDiscretionary: next.isDiscretionary,
+        rafPercent: next.rafPercent,
       });
 
       if (!result.success) {
@@ -77,10 +81,10 @@ export function SettingsForecastControls({ initialSettings }: Props) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Forecast Tuning</h3>
+      <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Forecast Tuning and RAF</h3>
       <Card className="p-4 space-y-3">
         <p className="text-xs text-muted">
-          Strategy controls only affect forecast behavior. They do not modify historical transactions.
+          Strategy controls affect forecast behavior. RAF percentages control how income is pre-assigned to each category.
         </p>
 
         {forecastCategories.map((item) => (
@@ -145,6 +149,24 @@ export function SettingsForecastControls({ initialSettings }: Props) {
                   disabled={isPending}
                 />
                 Discretionary
+              </label>
+
+              <label className="text-xs text-muted">
+                RAF %
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  className="mt-1 w-full rounded border border-gray-300 dark:border-gray-700 bg-transparent px-2 py-1 text-sm"
+                  value={item.rafPercent}
+                  onChange={(e) =>
+                    onUpdate(item.id, {
+                      rafPercent: Number.parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  disabled={isPending}
+                />
               </label>
             </div>
           </div>
