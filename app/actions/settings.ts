@@ -153,6 +153,7 @@ export async function applyRafTransferSuggestion(input: {
 
     revalidatePath('/');
     revalidatePath('/settings');
+    revalidatePath('/raf');
 
     return {
       success: true,

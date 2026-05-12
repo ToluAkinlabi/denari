@@ -6,7 +6,7 @@ import {
   Home,
   List,
   Settings,
-  TrendingUp,
+  PieChart,
   CalendarRange,
 } from 'lucide-react';
 
@@ -18,7 +18,7 @@ export function Navigation() {
   const navItems = [
     { href: '/', icon: Home, label: 'Dashboard', mobile: true },
     { href: '/transactions', icon: List, label: 'Transactions', mobile: true },
-    { href: '/reports', icon: TrendingUp, label: 'Reports', mobile: true },
+    { href: '/raf', icon: PieChart, label: 'RAF', mobile: true },
     { href: '/periods', icon: CalendarRange, label: 'Periods', mobile: true },
     { href: '/settings', icon: Settings, label: 'Settings', mobile: true },
   ];

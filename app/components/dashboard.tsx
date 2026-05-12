@@ -1,13 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
 import { TrendingUp, CheckCircle, ArrowDownCircle, ArrowUpCircle, Calendar } from 'lucide-react';
 import { Card } from './card';
 import { StatCard } from './stat-card';
 import type { DashboardData } from '@/app/actions/dashboard';
-import { applyRafTransferSuggestion } from '@/app/actions/settings';
 import { getHealthIndicator } from '@/lib/utils';
 
 interface DashboardContentProps {
@@ -15,9 +12,6 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ data }: DashboardContentProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [actionStatus, setActionStatus] = useState('');
   const score = Number(data.scorecard.overall);
   const health = getHealthIndicator(score);
   const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
@@ -87,30 +81,6 @@ export function DashboardContent({ data }: DashboardContentProps) {
     pacePercent >= 10 ? 'w-3/12' :
     pacePercent > 0 ? 'w-2/12' :
     'w-0';
-
-  const handleApplySuggestion = (suggestion: {
-    fromBucket: string;
-    toBucket: string;
-    amount: string;
-  }) => {
-    startTransition(async () => {
-      const result = await applyRafTransferSuggestion({
-        fromBucketName: suggestion.fromBucket,
-        toBucketName: suggestion.toBucket,
-        transferAmount: Number(suggestion.amount),
-        income: Number(data.cashMetrics.income),
-      });
-
-      if (!result.success) {
-        setActionStatus(result.error || 'Could not apply RAF rebalance.');
-        return;
-      }
-
-      const moved = result.data?.movedPercent ?? 0;
-      setActionStatus(`Applied: moved ${moved}% from ${suggestion.fromBucket} to ${suggestion.toBucket}.`);
-      router.refresh();
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -234,113 +204,38 @@ export function DashboardContent({ data }: DashboardContentProps) {
         </div>
       </Card>
 
-      <Card className={`p-4 ${rafCardAccentClass}`}>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold">RAF Allocation</h3>
-          <span className={`text-[10px] px-2 py-0.5 rounded uppercase tracking-wide ${rafHeadlineClass} bg-black/20`}>
-            {data.raf.profileSource.toLowerCase()}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-          <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-muted">Allocated</p>
-            <p className="font-semibold text-emerald-400">${data.raf.allocated}</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-muted">Unallocated</p>
-            <p className="font-semibold text-amber-300">${data.raf.unallocated}</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-muted">Total RAF %</p>
-            <p className="font-semibold text-sky-300">{data.raf.totalPercent}%</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-muted">Overallocated</p>
-            <p className="font-semibold text-red-300">${data.raf.overallocated}</p>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-gray-700 px-3 py-2 mb-3">
-          <p className="text-xs font-semibold text-gray-200 mb-1">RAF Formula</p>
-          <p className="text-xs text-gray-300">Allocated = Income x RAF % | Remaining = Allocated - Spent</p>
-        </div>
-
-        <div className="space-y-2">
-          {data.raf.buckets.slice(0, 4).map((bucket) => (
-            <div key={bucket.categoryId} className="rounded-lg border border-gray-700 px-3 py-2 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">{bucket.name}</p>
-                <p className="text-[10px] text-muted">{bucket.percent} of income · {bucket.status.toLowerCase().replace('_', ' ')}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-sm font-semibold ${bucket.status === 'EXHAUSTED' ? 'text-red-300' : bucket.status === 'AT_RISK' ? 'text-amber-300' : 'text-green-300'}`}>
-                  ${bucket.remaining} left
-                </p>
-                <p className="text-[10px] text-muted">${bucket.spent} spent / ${bucket.allocated} allocated</p>
-              </div>
-            </div>
-          ))}
-
-          <div className="rounded-lg border border-gray-700 px-3 py-2">
-            <p className="text-xs font-semibold text-gray-200 mb-1">Weekly RAF Trend ({data.rafWeeklyTrend.periodProgressPercent}% period progress)</p>
-            <p className="text-xs text-amber-200 mb-2">{data.rafWeeklyTrend.topOverspendBucket}</p>
-            <div className="space-y-1">
-              {data.rafWeeklyTrend.buckets.slice(0, 3).map((bucket) => (
-                <div key={bucket.name} className="flex items-center justify-between text-[11px] text-gray-300">
-                  <span>{bucket.name}</span>
-                  <span className={bucket.status === 'OVER' ? 'text-red-300' : bucket.status === 'UNDER' ? 'text-green-300' : 'text-amber-300'}>
-                    {bucket.status} ({bucket.variance.startsWith('-') ? '' : '+'}${bucket.variance})
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {data.raf.transferSuggestions.length > 0 && (
-            <div className="rounded-lg border border-sky-700/40 bg-sky-950/20 px-3 py-2">
-              <p className="text-xs font-semibold text-sky-200 mb-1">Suggested RAF Rebalance</p>
-              <ul className="space-y-1">
-                {data.raf.transferSuggestions.slice(0, 2).map((item) => (
-                  <li key={`${item.fromBucket}-${item.toBucket}-${item.amount}`} className="text-xs text-sky-100 flex items-center justify-between gap-3">
-                    <span>• Move about ${item.amount} from {item.fromBucket} to {item.toBucket}</span>
-                    <button
-                      type="button"
-                      className="px-2 py-1 rounded bg-sky-700 text-white text-[10px] disabled:opacity-60"
-                      disabled={isPending}
-                      onClick={() => handleApplySuggestion(item)}
-                    >
-                      {isPending ? 'Applying...' : 'Apply'}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="rounded-lg border border-gray-700 px-3 py-2">
-            <p className="text-xs font-semibold text-gray-200 mb-1">Recovery Actions</p>
-            <div className="flex items-center gap-2">
-              <Link href="/settings" className="text-[11px] px-2 py-1 rounded bg-amber-700 text-white">Tune RAF</Link>
-              <Link href="/add" className="text-[11px] px-2 py-1 rounded bg-gray-700 text-white">Log Entry</Link>
-              <Link href="/transactions" className="text-[11px] px-2 py-1 rounded bg-gray-700 text-white">Review Entries</Link>
-            </div>
-            {actionStatus ? <p className="text-[11px] text-amber-200 mt-2">{actionStatus}</p> : null}
-          </div>
-
-          {data.raf.warnings.length > 0 && (
-            <div className="rounded-lg border border-yellow-700/40 bg-yellow-950/20 px-3 py-2">
-              <p className="text-xs font-semibold text-yellow-200 mb-1">
-                {data.raf.warnings.length} RAF warning{data.raf.warnings.length === 1 ? '' : 's'}
+      <Link href="/raf">
+        <Card className={`p-4 ${rafCardAccentClass} hover:opacity-90 transition-opacity cursor-pointer`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted uppercase tracking-wide mb-1">RAF Allocation</p>
+              <p className={`text-base font-semibold ${rafHeadlineClass}`}>
+                {data.raf.exhaustedBuckets.length > 0
+                  ? `${data.raf.exhaustedBuckets.length} bucket${data.raf.exhaustedBuckets.length === 1 ? '' : 's'} exhausted`
+                  : data.raf.atRiskBuckets.length > 0
+                  ? `${data.raf.atRiskBuckets.length} bucket${data.raf.atRiskBuckets.length === 1 ? '' : 's'} at risk`
+                  : 'All buckets healthy'}
               </p>
-              <ul className="space-y-1">
-                {data.raf.warnings.slice(0, 3).map((warning) => (
-                  <li key={warning} className="text-xs text-yellow-100">• {warning}</li>
-                ))}
-              </ul>
+              <p className="text-xs text-muted mt-0.5">
+                ${data.raf.allocated} allocated · ${data.raf.unallocated} free
+              </p>
             </div>
-          )}
-        </div>
-      </Card>
+            <div className="text-right">
+              <p className="text-[10px] text-muted mb-1">View full plan →</p>
+              <div className="flex gap-1 justify-end">
+                {data.raf.buckets.slice(0, 4).map((b) => (
+                  <span
+                    key={b.categoryId}
+                    className={`w-2 h-2 rounded-full inline-block ${
+                      b.status === 'EXHAUSTED' ? 'bg-red-400' : b.status === 'AT_RISK' ? 'bg-amber-400' : 'bg-emerald-400'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Link>
 
       <Card className={`p-4 ${data.paceMetrics.status === 'RED' ? 'border-red-700 bg-red-950/50' : data.paceMetrics.status === 'YELLOW' ? 'border-yellow-700 bg-yellow-950/40' : 'border-green-700 bg-green-950/40'}`}>
         <h3 className="text-sm font-semibold mb-3">Period Pace</h3>
