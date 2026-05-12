@@ -149,3 +149,37 @@ export async function updateCategoryForecastSettings(
     data,
   });
 }
+
+/**
+ * Rebalance RAF percentages between two categories.
+ */
+export async function rebalanceCategoryRafPercentages(input: {
+  userId: string;
+  fromCategoryId: string;
+  toCategoryId: string;
+  fromPercent: number;
+  toPercent: number;
+}) {
+  const { userId, fromCategoryId, toCategoryId, fromPercent, toPercent } = input;
+
+  return prisma.$transaction([
+    prisma.category.updateMany({
+      where: {
+        id: fromCategoryId,
+        userId,
+      },
+      data: {
+        rafPercent: new Prisma.Decimal(fromPercent),
+      },
+    }),
+    prisma.category.updateMany({
+      where: {
+        id: toCategoryId,
+        userId,
+      },
+      data: {
+        rafPercent: new Prisma.Decimal(toPercent),
+      },
+    }),
+  ]);
+}

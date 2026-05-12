@@ -100,3 +100,72 @@ export async function updateCategoryForecastSetting(input: {
     };
   }
 }
+
+export async function applyRafTransferSuggestion(input: {
+  fromBucketName: string;
+  toBucketName: string;
+  transferAmount: number;
+  income: number;
+  userId?: string;
+}): Promise<ApiResponse<{ movedPercent: number; fromPercent: number; toPercent: number }>> {
+  try {
+    const resolvedUserId = await usersRepo.resolveUserId(input.userId);
+    const categories = await categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId);
+    const fromCategory = categories.find((item) => item.name === input.fromBucketName);
+    const toCategory = categories.find((item) => item.name === input.toBucketName);
+
+    if (!fromCategory || !toCategory) {
+      return {
+        success: false,
+        error: 'Could not find one or both RAF buckets.',
+      };
+    }
+
+    if (input.income <= 0 || input.transferAmount <= 0) {
+      return {
+        success: false,
+        error: 'Income and transfer amount must be positive.',
+      };
+    }
+
+    const requestedShiftPercent = (input.transferAmount / input.income) * 100;
+    const fromCurrent = Number(fromCategory.rafPercent ?? 0);
+    const toCurrent = Number(toCategory.rafPercent ?? 0);
+    const effectiveShiftPercent = Math.max(0, Math.min(requestedShiftPercent, fromCurrent));
+
+    if (effectiveShiftPercent <= 0) {
+      return {
+        success: false,
+        error: `${fromCategory.name} has no RAF percentage left to shift.`,
+      };
+    }
+
+    const nextFrom = Number((fromCurrent - effectiveShiftPercent).toFixed(2));
+    const nextTo = Number((toCurrent + effectiveShiftPercent).toFixed(2));
+
+    await categoriesRepo.rebalanceCategoryRafPercentages({
+      userId: resolvedUserId,
+      fromCategoryId: fromCategory.id,
+      toCategoryId: toCategory.id,
+      fromPercent: nextFrom,
+      toPercent: nextTo,
+    });
+
+    revalidatePath('/');
+    revalidatePath('/settings');
+
+    return {
+      success: true,
+      data: {
+        movedPercent: Number(effectiveShiftPercent.toFixed(2)),
+        fromPercent: nextFrom,
+        toPercent: nextTo,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}

@@ -1,7 +1,13 @@
+"use client";
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
 import { TrendingUp, CheckCircle, ArrowDownCircle, ArrowUpCircle, Calendar } from 'lucide-react';
 import { Card } from './card';
 import { StatCard } from './stat-card';
 import type { DashboardData } from '@/app/actions/dashboard';
+import { applyRafTransferSuggestion } from '@/app/actions/settings';
 import { getHealthIndicator } from '@/lib/utils';
 
 interface DashboardContentProps {
@@ -9,6 +15,9 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ data }: DashboardContentProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [actionStatus, setActionStatus] = useState('');
   const score = Number(data.scorecard.overall);
   const health = getHealthIndicator(score);
   const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
@@ -78,6 +87,30 @@ export function DashboardContent({ data }: DashboardContentProps) {
     pacePercent >= 10 ? 'w-3/12' :
     pacePercent > 0 ? 'w-2/12' :
     'w-0';
+
+  const handleApplySuggestion = (suggestion: {
+    fromBucket: string;
+    toBucket: string;
+    amount: string;
+  }) => {
+    startTransition(async () => {
+      const result = await applyRafTransferSuggestion({
+        fromBucketName: suggestion.fromBucket,
+        toBucketName: suggestion.toBucket,
+        transferAmount: Number(suggestion.amount),
+        income: Number(data.cashMetrics.income),
+      });
+
+      if (!result.success) {
+        setActionStatus(result.error || 'Could not apply RAF rebalance.');
+        return;
+      }
+
+      const moved = result.data?.movedPercent ?? 0;
+      setActionStatus(`Applied: moved ${moved}% from ${suggestion.fromBucket} to ${suggestion.toBucket}.`);
+      router.refresh();
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -227,6 +260,11 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </div>
         </div>
 
+        <div className="rounded-lg border border-gray-700 px-3 py-2 mb-3">
+          <p className="text-xs font-semibold text-gray-200 mb-1">RAF Formula</p>
+          <p className="text-xs text-gray-300">Allocated = Income x RAF % | Remaining = Allocated - Spent</p>
+        </div>
+
         <div className="space-y-2">
           {data.raf.buckets.slice(0, 4).map((bucket) => (
             <div key={bucket.categoryId} className="rounded-lg border border-gray-700 px-3 py-2 flex items-center justify-between gap-3">
@@ -263,13 +301,31 @@ export function DashboardContent({ data }: DashboardContentProps) {
               <p className="text-xs font-semibold text-sky-200 mb-1">Suggested RAF Rebalance</p>
               <ul className="space-y-1">
                 {data.raf.transferSuggestions.slice(0, 2).map((item) => (
-                  <li key={`${item.fromBucket}-${item.toBucket}-${item.amount}`} className="text-xs text-sky-100">
-                    • Move about ${item.amount} from {item.fromBucket} to {item.toBucket}
+                  <li key={`${item.fromBucket}-${item.toBucket}-${item.amount}`} className="text-xs text-sky-100 flex items-center justify-between gap-3">
+                    <span>• Move about ${item.amount} from {item.fromBucket} to {item.toBucket}</span>
+                    <button
+                      type="button"
+                      className="px-2 py-1 rounded bg-sky-700 text-white text-[10px] disabled:opacity-60"
+                      disabled={isPending}
+                      onClick={() => handleApplySuggestion(item)}
+                    >
+                      {isPending ? 'Applying...' : 'Apply'}
+                    </button>
                   </li>
                 ))}
               </ul>
             </div>
           )}
+
+          <div className="rounded-lg border border-gray-700 px-3 py-2">
+            <p className="text-xs font-semibold text-gray-200 mb-1">Recovery Actions</p>
+            <div className="flex items-center gap-2">
+              <Link href="/settings" className="text-[11px] px-2 py-1 rounded bg-amber-700 text-white">Tune RAF</Link>
+              <Link href="/add" className="text-[11px] px-2 py-1 rounded bg-gray-700 text-white">Log Entry</Link>
+              <Link href="/transactions" className="text-[11px] px-2 py-1 rounded bg-gray-700 text-white">Review Entries</Link>
+            </div>
+            {actionStatus ? <p className="text-[11px] text-amber-200 mt-2">{actionStatus}</p> : null}
+          </div>
 
           {data.raf.warnings.length > 0 && (
             <div className="rounded-lg border border-yellow-700/40 bg-yellow-950/20 px-3 py-2">
