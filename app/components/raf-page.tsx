@@ -61,7 +61,6 @@ export function RafPageContent({ data }: RafPageContentProps) {
         fromBucketName: fromBucket.name,
         toBucketName: toBucket.name,
         transferAmount: amount,
-        income,
       });
 
       if (!result.success) {
@@ -69,7 +68,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
         return;
       }
 
-      setStatus(`Moved ${result.data?.movedPercent}% from ${fromBucket.name} to ${toBucket.name}.`);
+      setStatus(`Moved $${result.data?.movedAmount?.toFixed(2) ?? amount.toFixed(2)} from ${fromBucket.name} to ${toBucket.name}.`);
       setTransferAmt('');
       router.refresh();
     });
@@ -175,7 +174,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
         <h2 className="text-sm font-semibold">Move Funds Between Buckets</h2>
         <p className="text-xs text-muted">
           Shift budget from a bucket with surplus to one that needs more.
-          This updates your RAF % split permanently for this profile.
+          This move is period-only and keeps your base RAF % profile unchanged.
         </p>
 
         <div className="grid grid-cols-2 gap-2">
@@ -235,11 +234,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
             Move <span className="font-semibold text-sky-300">${Number(transferAmt).toFixed(2)}</span> from{' '}
             <span className="font-semibold">{fromBucket.name}</span> →{' '}
             <span className="font-semibold">{toBucket.name}</span>
-            {income > 0 && (
-              <span className="text-gray-400">
-                {' '}(shifts ~{((Number(transferAmt) / income) * 100).toFixed(1)}%)
-              </span>
-            )}
+            <span className="text-gray-400"> (period-only reallocation)</span>
           </div>
         )}
 

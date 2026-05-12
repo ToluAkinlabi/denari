@@ -5,9 +5,10 @@ import { getPayCycleIndex } from '@/lib/periods';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
+import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome } from '@/lib/finance/wealth';
-import { calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
+import { applyRafPeriodTransfers, calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
 
 export interface RafPageData {
   periodId: string;
@@ -40,14 +41,15 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
       return { success: false, error: 'No current period found' };
     }
 
-    const [currentEntries, categories] = await Promise.all([
+    const [currentEntries, categories, periodTransfers] = await Promise.all([
       ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id),
       categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
+      rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
     ]);
 
     const currentIncome = calculateIncome(currentEntries);
 
-    const rafPlan = calculateRafPlan({
+    const baseRafPlan = calculateRafPlan({
       income: currentIncome,
       entries: currentEntries.map((e) => ({ categoryId: e.categoryId, amount: e.amount })),
       categories: categories.map((c) => ({
@@ -59,6 +61,14 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         rafPercent: c.rafPercent,
       })),
     });
+    const rafPlan = applyRafPeriodTransfers(
+      baseRafPlan,
+      periodTransfers.map((transfer) => ({
+        fromCategoryId: transfer.fromCategoryId,
+        toCategoryId: transfer.toCategoryId,
+        amount: transfer.amount,
+      }))
+    );
 
     const periodStart = startOfDay(new Date(currentPeriod.startDate));
     const periodEnd = startOfDay(new Date(currentPeriod.endDate));

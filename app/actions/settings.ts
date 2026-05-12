@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import * as usersRepo from '@/lib/repositories/users';
 import * as categoriesRepo from '@/lib/repositories/categories';
+import * as periodsRepo from '@/lib/repositories/periods';
+import * as ledgerRepo from '@/lib/repositories/ledger';
+import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import { calculateIncome } from '@/lib/finance/wealth';
+import { applyRafPeriodTransfers, calculateRafPlan } from '@/lib/finance/raf';
 import type { ForecastStrategy } from '@prisma/client';
 
 export interface ApiResponse<T> {
@@ -105,12 +110,24 @@ export async function applyRafTransferSuggestion(input: {
   fromBucketName: string;
   toBucketName: string;
   transferAmount: number;
-  income: number;
   userId?: string;
-}): Promise<ApiResponse<{ movedPercent: number; fromPercent: number; toPercent: number }>> {
+}): Promise<ApiResponse<{ movedAmount: number; fromBucketName: string; toBucketName: string }>> {
   try {
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
-    const categories = await categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId);
+    const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
+    if (!currentPeriod) {
+      return {
+        success: false,
+        error: 'No current period found.',
+      };
+    }
+
+    const [categories, currentEntries, existingTransfers] = await Promise.all([
+      categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
+      ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id),
+      rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
+    ]);
+
     const fromCategory = categories.find((item) => item.name === input.fromBucketName);
     const toCategory = categories.find((item) => item.name === input.toBucketName);
 
@@ -121,34 +138,59 @@ export async function applyRafTransferSuggestion(input: {
       };
     }
 
-    if (input.income <= 0 || input.transferAmount <= 0) {
+    if (input.transferAmount <= 0) {
       return {
         success: false,
-        error: 'Income and transfer amount must be positive.',
+        error: 'Transfer amount must be positive.',
       };
     }
 
-    const requestedShiftPercent = (input.transferAmount / input.income) * 100;
-    const fromCurrent = Number(fromCategory.rafPercent ?? 0);
-    const toCurrent = Number(toCategory.rafPercent ?? 0);
-    const effectiveShiftPercent = Math.max(0, Math.min(requestedShiftPercent, fromCurrent));
+    const currentIncome = calculateIncome(currentEntries);
+    const baseRafPlan = calculateRafPlan({
+      income: currentIncome,
+      entries: currentEntries.map((entry) => ({ categoryId: entry.categoryId, amount: entry.amount })),
+      categories: categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        type: category.type,
+        countsAsExpense: category.countsAsExpense ?? false,
+        countsAsSavings: category.countsAsSavings ?? false,
+        rafPercent: category.rafPercent,
+      })),
+    });
 
-    if (effectiveShiftPercent <= 0) {
+    const rafPlan = applyRafPeriodTransfers(
+      baseRafPlan,
+      existingTransfers.map((transfer) => ({
+        fromCategoryId: transfer.fromCategoryId,
+        toCategoryId: transfer.toCategoryId,
+        amount: transfer.amount,
+      }))
+    );
+
+    const fromBucket = rafPlan.buckets.find((bucket) => bucket.categoryId === fromCategory.id);
+    const fromSurplus = fromBucket ? Math.max(0, Number(fromBucket.remaining)) : 0;
+
+    if (fromSurplus <= 0) {
       return {
         success: false,
-        error: `${fromCategory.name} has no RAF percentage left to shift.`,
+        error: `${fromCategory.name} has no available dollars left to move this period.`,
       };
     }
 
-    const nextFrom = Number((fromCurrent - effectiveShiftPercent).toFixed(2));
-    const nextTo = Number((toCurrent + effectiveShiftPercent).toFixed(2));
+    if (input.transferAmount > fromSurplus + 0.01) {
+      return {
+        success: false,
+        error: `Max transfer from ${fromCategory.name} is $${fromSurplus.toFixed(2)} based on current surplus.`,
+      };
+    }
 
-    await categoriesRepo.rebalanceCategoryRafPercentages({
+    await rafTransfersRepo.createRafTransfer({
       userId: resolvedUserId,
+      periodId: currentPeriod.id,
       fromCategoryId: fromCategory.id,
       toCategoryId: toCategory.id,
-      fromPercent: nextFrom,
-      toPercent: nextTo,
+      amount: Number(input.transferAmount.toFixed(2)),
     });
 
     revalidatePath('/');
@@ -158,9 +200,9 @@ export async function applyRafTransferSuggestion(input: {
     return {
       success: true,
       data: {
-        movedPercent: Number(effectiveShiftPercent.toFixed(2)),
-        fromPercent: nextFrom,
-        toPercent: nextTo,
+        movedAmount: Number(input.transferAmount.toFixed(2)),
+        fromBucketName: fromCategory.name,
+        toBucketName: toCategory.name,
       },
     };
   } catch (error) {

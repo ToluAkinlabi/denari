@@ -13,12 +13,13 @@ import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/cli
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
+import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
 import { calculateTotalSpending } from '@/lib/finance/spending';
 import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
-import { calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
+import { applyRafPeriodTransfers, calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
 import {
   calculateIncome,
   calculateSavingsTransfers,
@@ -249,7 +250,10 @@ export async function getDashboardData(
       const entryDay = startOfDay(entry.date);
       return entryDay >= periodStart && entryDay <= periodEnd;
     });
-    const categories = await categoriesRepo.getCategoriesForUser(resolvedUserId);
+    const [categories, periodTransfers] = await Promise.all([
+      categoriesRepo.getCategoriesForUser(resolvedUserId),
+      rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
+    ]);
     const categoryMap = new Map<
       string,
       {
@@ -323,7 +327,7 @@ export async function getDashboardData(
       status: paceStatus,
     };
 
-    const rafPlan = calculateRafPlan({
+    const baseRafPlan = calculateRafPlan({
       income: currentIncome,
       entries: currentEntries.map((entry) => ({
         categoryId: entry.categoryId,
@@ -338,6 +342,14 @@ export async function getDashboardData(
         rafPercent: category.rafPercent,
       })),
     });
+    const rafPlan = applyRafPeriodTransfers(
+      baseRafPlan,
+      periodTransfers.map((transfer) => ({
+        fromCategoryId: transfer.fromCategoryId,
+        toCategoryId: transfer.toCategoryId,
+        amount: transfer.amount,
+      }))
+    );
 
     const periodProgressRatio = paceMetrics.totalDays > 0
       ? new Decimal(paceMetrics.day).dividedBy(paceMetrics.totalDays)

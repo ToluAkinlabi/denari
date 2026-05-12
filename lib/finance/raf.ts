@@ -68,6 +68,12 @@ export interface RafTransferSuggestion {
   reason: string;
 }
 
+export interface RafPeriodTransferInput {
+  fromCategoryId: string;
+  toCategoryId: string;
+  amount: Decimal | number | string;
+}
+
 export interface RafGuidanceConfidence {
   level: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
@@ -258,6 +264,84 @@ export function calculateRafPlan(input: {
     overallocated: Decimal.max(overallocated, new Decimal(0)).toFixed(2),
     profileSource: useDefaultProfile ? 'DEFAULT' : 'CONFIGURED',
     warnings,
+    buckets,
+    exhaustedBuckets,
+    atRiskBuckets,
+    transferSuggestions,
+  };
+}
+
+export function applyRafPeriodTransfers(
+  plan: RafPlan,
+  transfers: RafPeriodTransferInput[]
+): RafPlan {
+  if (transfers.length === 0) {
+    return plan;
+  }
+
+  const outboundByCategory = new Map<string, Decimal>();
+  const inboundByCategory = new Map<string, Decimal>();
+
+  transfers.forEach((transfer) => {
+    const amount = toDecimal(transfer.amount);
+    if (amount.lessThanOrEqualTo(0)) return;
+
+    outboundByCategory.set(
+      transfer.fromCategoryId,
+      (outboundByCategory.get(transfer.fromCategoryId) ?? new Decimal(0)).plus(amount)
+    );
+    inboundByCategory.set(
+      transfer.toCategoryId,
+      (inboundByCategory.get(transfer.toCategoryId) ?? new Decimal(0)).plus(amount)
+    );
+  });
+
+  const buckets = plan.buckets
+    .map((bucket) => {
+      const allocated = toDecimal(bucket.allocated);
+      const spent = toDecimal(bucket.spent);
+      const outbound = outboundByCategory.get(bucket.categoryId) ?? new Decimal(0);
+      const inbound = inboundByCategory.get(bucket.categoryId) ?? new Decimal(0);
+
+      const adjustedAllocated = allocated.minus(outbound).plus(inbound);
+      const remaining = adjustedAllocated.minus(spent);
+      const remainingPercent = adjustedAllocated.equals(0)
+        ? new Decimal(0)
+        : remaining.dividedBy(adjustedAllocated).times(100);
+      const status: RafBucketSummary['status'] = remaining.lessThanOrEqualTo(0)
+        ? 'EXHAUSTED'
+        : remainingPercent.lessThanOrEqualTo(15)
+        ? 'AT_RISK'
+        : 'OPEN';
+
+      return {
+        ...bucket,
+        allocated: adjustedAllocated.toFixed(2),
+        remaining: remaining.toFixed(2),
+        remainingPercent: formatPercent(remainingPercent),
+        status,
+        sortKey: remaining.toNumber(),
+      };
+    })
+    .sort((left, right) => left.sortKey - right.sortKey)
+    .map((bucket) => ({
+      categoryId: bucket.categoryId,
+      name: bucket.name,
+      percent: bucket.percent,
+      allocated: bucket.allocated,
+      spent: bucket.spent,
+      remaining: bucket.remaining,
+      remainingPercent: bucket.remainingPercent,
+      status: bucket.status,
+      kind: bucket.kind,
+    }));
+
+  const exhaustedBuckets = buckets.filter((bucket) => bucket.status === 'EXHAUSTED');
+  const atRiskBuckets = buckets.filter((bucket) => bucket.status === 'AT_RISK');
+  const transferSuggestions = buildRafTransferSuggestions({ buckets });
+
+  return {
+    ...plan,
     buckets,
     exhaustedBuckets,
     atRiskBuckets,
