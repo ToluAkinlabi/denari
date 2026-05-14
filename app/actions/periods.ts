@@ -47,7 +47,9 @@ async function cascadeRecalculateAllPeriods(userId: string): Promise<void> {
     });
   });
 
-  let carry = new Decimal(0);
+  // Seed carry from the oldest period's stored opening cash rather than zero.
+  // This preserves any manually-anchored balance from before the earliest reconciled anchor.
+  let carry = periods.length > 0 ? new Decimal(periods[0].openingCash.toString()) : new Decimal(0);
   for (const period of periods) {
     const entries = (period as { ledgerEntries?: unknown[] }).ledgerEntries ?? [];
     const income = calculateIncome(entries as Parameters<typeof calculateIncome>[0]);
@@ -115,6 +117,10 @@ export async function reconcilePeriod(
     const period = await periodsRepo.getPeriodById(data.periodId);
     if (!period) {
       return { success: false, error: 'Period not found' };
+    }
+
+    if (period.userId !== resolvedUserId) {
+      return { success: false, error: 'Unauthorized period access' };
     }
 
     // Build category map for calculations
@@ -232,9 +238,12 @@ export async function unreconcilePeriod(
  *   })
  */
 export async function updatePeriodOpeningCash(
-  input: unknown
+  input: unknown,
+  userId?: string
 ): Promise<ApiResponse<{ success: boolean; message: string }>> {
   try {
+    const resolvedUserId = await usersRepo.resolveUserId(userId);
+
     // Validate
     const [valid, validationError] = validate(periodOpeningCashSchema, input);
     if (!valid) {
@@ -245,6 +254,15 @@ export async function updatePeriodOpeningCash(
     }
 
     const data = validationError;
+
+    // Ownership check
+    const period = await periodsRepo.getPeriodById(data.periodId);
+    if (!period) {
+      return { success: false, error: 'Period not found' };
+    }
+    if (period.userId !== resolvedUserId) {
+      return { success: false, error: 'Unauthorized period access' };
+    }
 
     // Update period
     await periodsRepo.updatePeriod(data.periodId, {

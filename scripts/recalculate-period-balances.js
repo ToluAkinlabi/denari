@@ -3,7 +3,7 @@ let prisma;
 async function main() {
   const { PrismaClient } = await import('@prisma/client');
   prisma = new PrismaClient();
-  const user = await prisma.user.findFirst({ where: { name: 'Personal' } });
+  const user = await prisma.user.findFirst({ orderBy: { createdAt: 'asc' } });
   if (!user) {
     console.log('No user found.');
     return;
@@ -22,7 +22,9 @@ async function main() {
     return;
   }
 
-  let carry = 0;
+  // Seed carry from the oldest period's stored opening cash.
+  // This preserves any manually-anchored balance rather than resetting to zero.
+  let carry = periods.length > 0 ? Number(periods[0].openingCash) : 0;
 
   for (const period of periods) {
     const income = period.ledgerEntries

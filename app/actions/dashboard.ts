@@ -197,6 +197,11 @@ export async function getDashboardData(
       };
     }
 
+    // Ownership guard: when a specific periodId is provided, ensure it belongs to this user.
+    if (options?.periodId && currentPeriod.userId !== resolvedUserId) {
+      return { success: false, error: 'Unauthorized period access' };
+    }
+
     // Fetch all data
     let allCurrentPeriodEntries = await ledgerRepo.getLedgerEntriesForPeriod(
       currentPeriod.id

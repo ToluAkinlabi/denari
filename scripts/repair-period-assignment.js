@@ -60,7 +60,6 @@ async function ensurePeriod(userId, window, cache) {
 
 async function main() {
   const user = await prisma.user.findFirst({
-    where: { name: 'Personal' },
     orderBy: { createdAt: 'asc' },
   });
 

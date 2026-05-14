@@ -6,12 +6,13 @@
 
 'use server';
 
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfDay } from 'date-fns';
 import { Decimal } from '@prisma/client/runtime/library';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as usersRepo from '@/lib/repositories/users';
+import * as plaidRepo from '@/lib/repositories/plaid';
 import { calculateIncome, calculateSavingsTransfers } from '@/lib/finance/wealth';
 import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/client';
 import { calculateTotalSpending } from '@/lib/finance/spending';
@@ -81,20 +82,38 @@ export async function getMonthlyReport(
     );
 
     const entriesByPeriod = new Map<string, (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[]>();
+    const importedByPeriod = new Map<string, { categoryId: string; amount: Decimal; entryType: string }[]>();
     for (const period of [...periods, ...recentPeriods]) {
       if (entriesByPeriod.has(period.id)) {
         continue;
       }
 
-      const entries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+      const [entries, importedEntries] = await Promise.all([
+        ledgerRepo.getLedgerEntriesForPeriod(period.id),
+        plaidRepo.getIncludedImportedTransactionsForDateRange(
+          resolvedUserId,
+          startOfDay(period.startDate),
+          startOfDay(period.endDate)
+        ),
+      ]);
       entriesByPeriod.set(period.id, entries);
+      importedByPeriod.set(
+        period.id,
+        importedEntries.map((e) => ({ categoryId: e.categoryId ?? '', amount: e.amount, entryType: 'EXPENSE' }))
+      );
     }
 
     const buildPeriodSummaries = (
       sourcePeriods: Array<{ id: string; startDate: Date; label: string; openingCash: Decimal; closingCashActual: Decimal | null }>
     ) => {
       return sourcePeriods.map((period) => {
-        const entries = entriesByPeriod.get(period.id) || [];
+        const ledgerEntries = entriesByPeriod.get(period.id) || [];
+        const imported = importedByPeriod.get(period.id) || [];
+        // Merge imported bank transactions so report totals match the RAF and dashboard pages.
+        const entries = [
+          ...ledgerEntries,
+          ...imported,
+        ] as (LedgerEntry & { category: Category | null; savingsAllocations: SavingsAllocation[]; notes: Note[] })[];
         const income = calculateIncome(entries);
         const spending = calculateTotalSpending(entries, categoryMap);
         const savings = calculateSavingsTransfers(entries, categoryMap);

@@ -22,6 +22,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
   const [transferAmt, setTransferAmt] = useState('');
 
   const income = Number(data.income);
+  const allocationBase = Number(data.allocationBase);
   const buckets = data.raf.buckets;
 
   const fromBucket = data.categories.find((c) => c.id === fromId);
@@ -46,8 +47,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
       setStatus('Enter a valid amount.');
       return;
     }
-    if (income <= 0) {
-      setStatus('No income logged this period.');
+    if (allocationBase <= 0) {
+      setStatus('No income or carry-forward available this period.');
       return;
     }
     if (amount > fromSurplus + 0.01) {

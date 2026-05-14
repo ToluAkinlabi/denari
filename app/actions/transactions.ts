@@ -523,6 +523,9 @@ export async function addTransaction(
         error: 'Category not found',
       };
     }
+    if (category.userId !== userId) {
+      return { success: false, error: 'Unauthorized category access' };
+    }
 
     // Step 3: Resolve period for transaction date
     const date = parseIsoDateString(data.date) || new Date();
@@ -799,6 +802,9 @@ export async function addSummaryEntry(
         success: false,
         error: 'Category not found',
       };
+    }
+    if (category.userId !== userId) {
+      return { success: false, error: 'Unauthorized category access' };
     }
 
     // Step 3: Resolve period for date

@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { startOfDay } from 'date-fns';
 import * as usersRepo from '@/lib/repositories/users';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import * as plaidRepo from '@/lib/repositories/plaid';
 import { calculateIncome } from '@/lib/finance/wealth';
 import { applyRafPeriodTransfers, calculateRafPlan } from '@/lib/finance/raf';
 import type { ForecastStrategy } from '@prisma/client';
@@ -122,11 +124,26 @@ export async function applyRafTransferSuggestion(input: {
       };
     }
 
-    const [categories, currentEntries, existingTransfers] = await Promise.all([
+    const [categories, currentEntries, importedEntries, existingTransfers] = await Promise.all([
       categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
       ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id),
+      plaidRepo.getIncludedImportedTransactionsForDateRange(
+        resolvedUserId,
+        startOfDay(currentPeriod.startDate),
+        startOfDay(currentPeriod.endDate)
+      ),
       rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
     ]);
+
+    // Merge imported bank transactions so transfer affordability matches the RAF page.
+    const allEntries = [
+      ...currentEntries,
+      ...importedEntries.map((entry) => ({
+        categoryId: entry.categoryId ?? '',
+        amount: entry.amount,
+        entryType: 'EXPENSE',
+      })),
+    ];
 
     const fromCategory = categories.find((item) => item.name === input.fromBucketName);
     const toCategory = categories.find((item) => item.name === input.toBucketName);
@@ -145,11 +162,11 @@ export async function applyRafTransferSuggestion(input: {
       };
     }
 
-    const currentIncome = calculateIncome(currentEntries);
+    const currentIncome = calculateIncome(allEntries);
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
       carryForward: currentPeriod.openingCash,
-      entries: currentEntries.map((entry) => ({ categoryId: entry.categoryId, amount: entry.amount })),
+      entries: allEntries.map((entry) => ({ categoryId: entry.categoryId, amount: entry.amount })),
       categories: categories.map((category) => ({
         id: category.id,
         name: category.name,
