@@ -108,20 +108,24 @@ export function RafPageContent({ data }: RafPageContentProps) {
         <p className="text-sm text-muted mt-0.5">Period #{data.periodIndex} · {data.periodRange}</p>
       </div>
 
-      {/* Income anchor */}
+      {/* Allocation anchor */}
       <Card className="p-4">
-        <p className="text-xs text-muted uppercase tracking-wide mb-1">Period Income</p>
+        <p className="text-xs text-muted uppercase tracking-wide mb-1">RAF Allocation Base</p>
         {data.hasIncome ? (
           <>
-            <p className="text-3xl font-bold text-emerald-400">${data.income}</p>
+            <p className={`text-3xl font-bold ${Number(data.allocationBase) >= 0 ? 'text-emerald-400' : 'text-red-300'}`}>
+              ${data.allocationBase}
+            </p>
             <p className="text-xs text-muted mt-1">
-              RAF split below is based on this income · {data.periodProgressPercent}% of period elapsed
+              Income ${data.income} + carry forward ${data.carryForward} · {data.periodProgressPercent}% of period elapsed
             </p>
           </>
         ) : (
           <div>
-            <p className="text-2xl font-bold text-gray-400">$0.00</p>
-            <p className="text-xs text-amber-300 mt-1">No income logged yet. Log income to activate RAF allocation.</p>
+            <p className="text-2xl font-bold text-red-300">${data.allocationBase}</p>
+            <p className="text-xs text-amber-300 mt-1">
+              Allocation base is not positive. Add income or improve carry forward to restore spendable RAF buckets.
+            </p>
           </div>
         )}
       </Card>

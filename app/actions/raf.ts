@@ -16,6 +16,8 @@ export interface RafPageData {
   periodIndex: number;
   periodRange: string;
   income: string;
+  carryForward: string;
+  allocationBase: string;
   hasIncome: boolean;
   raf: RafPlan;
   transfers: Array<{
@@ -71,9 +73,11 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
     ];
 
     const currentIncome = calculateIncome(allEntries);
+    const allocationBase = currentIncome.plus(currentPeriod.openingCash);
 
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
+      carryForward: currentPeriod.openingCash,
       entries: allEntries.map((e) => ({ categoryId: e.categoryId, amount: e.amount })),
       categories: categories.map((c) => ({
         id: c.id,
@@ -115,7 +119,9 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         periodIndex: getPayCycleIndex(currentPeriod.startDate) + 1,
         periodRange: `${startStr} – ${endStr}`,
         income: currentIncome.toFixed(2),
-        hasIncome: currentIncome.greaterThan(0),
+        carryForward: currentPeriod.openingCash.toFixed(2),
+        allocationBase: allocationBase.toFixed(2),
+        hasIncome: allocationBase.greaterThan(0),
         raf: rafPlan,
         transfers: periodTransfers.map((transfer) => ({
           id: transfer.id,

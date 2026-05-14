@@ -355,6 +355,7 @@ export async function getDashboardData(
 
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
+      carryForward: currentPeriod.openingCash,
       entries: currentEntriesWithImported.map((entry) => ({
         categoryId: entry.categoryId,
         amount: entry.amount,

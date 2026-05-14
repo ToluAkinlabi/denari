@@ -6,6 +6,7 @@
 
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   reconciliationSchema,
@@ -63,6 +64,14 @@ async function cascadeRecalculateAllPeriods(userId: string): Promise<void> {
     const closingActual = (period as { closingCashActual?: Decimal | null }).closingCashActual;
     carry = closingActual != null ? new Decimal(closingActual.toString()) : closingExpected;
   }
+}
+
+function revalidateFinancialViews() {
+  revalidatePath('/');
+  revalidatePath('/raf');
+  revalidatePath('/periods');
+  revalidatePath('/settings');
+  revalidatePath('/reports');
 }
 
 export interface ApiResponse<T> {
@@ -138,6 +147,7 @@ export async function reconcilePeriod(
 
     // Cascade: recalculate all periods so subsequent openings use this anchor
     await cascadeRecalculateAllPeriods(resolvedUserId);
+    revalidateFinancialViews();
 
     return {
       success: true,
@@ -200,6 +210,7 @@ export async function unreconcilePeriod(
     });
 
     await cascadeRecalculateAllPeriods(resolvedUserId);
+    revalidateFinancialViews();
 
     return { success: true, data: { reopened: true } };
   } catch (error) {

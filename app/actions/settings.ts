@@ -148,6 +148,7 @@ export async function applyRafTransferSuggestion(input: {
     const currentIncome = calculateIncome(currentEntries);
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
+      carryForward: currentPeriod.openingCash,
       entries: currentEntries.map((entry) => ({ categoryId: entry.categoryId, amount: entry.amount })),
       categories: categories.map((category) => ({
         id: category.id,

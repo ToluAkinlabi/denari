@@ -49,6 +49,8 @@ export interface RafBucketSummary {
 
 export interface RafPlan {
   totalIncome: string;
+  carryForward: string;
+  allocationBase: string;
   totalPercent: string;
   allocated: string;
   unallocated: string;
@@ -167,10 +169,13 @@ export function getRafGuidanceConfidence(input: {
 
 export function calculateRafPlan(input: {
   income: Decimal | number | string;
+  carryForward?: Decimal | number | string;
   entries: RafEntryInput[];
   categories: RafCategoryInput[];
 }): RafPlan {
   const income = toDecimal(input.income);
+  const carryForward = toDecimal(input.carryForward);
+  const allocationBase = income.plus(carryForward);
   const configuredTotal = input.categories.reduce(
     (sum, category) => sum.plus(toDecimal(category.rafPercent)),
     new Decimal(0)
@@ -184,7 +189,7 @@ export function calculateRafPlan(input: {
       const percent = useDefaultProfile
         ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
         : configuredPercent;
-      const allocated = income.times(percent).dividedBy(100);
+      const allocated = allocationBase.times(percent).dividedBy(100);
       const spent = input.entries
         .filter((entry) => entry.categoryId === category.id)
         .reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Decimal(0));
@@ -227,8 +232,8 @@ export function calculateRafPlan(input: {
   const exhaustedBuckets = buckets.filter((bucket) => bucket.status === 'EXHAUSTED');
   const atRiskBuckets = buckets.filter((bucket) => bucket.status === 'AT_RISK');
   const totalAllocated = buckets.reduce((sum, bucket) => sum.plus(bucket.allocated), new Decimal(0));
-  const unallocated = income.minus(totalAllocated);
-  const overallocated = totalAllocated.minus(income);
+  const unallocated = allocationBase.minus(totalAllocated);
+  const overallocated = totalAllocated.minus(allocationBase);
   const warnings: string[] = [];
   const transferSuggestions = buildRafTransferSuggestions({ buckets });
 
@@ -240,10 +245,16 @@ export function calculateRafPlan(input: {
     warnings.push('Using the default RAF allocation profile because no category percentages are configured yet.');
   }
 
+  if (!carryForward.equals(0)) {
+    warnings.push(
+      `Carry forward ${carryForward.greaterThan(0) ? '+' : ''}$${carryForward.toFixed(2)} is distributed across RAF buckets by your percentage profile.`
+    );
+  }
+
   if (overallocated.greaterThan(0)) {
-    warnings.push(`RAF allocations exceed current income by $${overallocated.toFixed(2)}.`);
+    warnings.push(`RAF allocations exceed allocation base by $${overallocated.toFixed(2)}.`);
   } else if (unallocated.greaterThan(0)) {
-    warnings.push(`$${unallocated.toFixed(2)} of income is not assigned to any RAF bucket.`);
+    warnings.push(`$${unallocated.toFixed(2)} of allocation base is not assigned to any RAF bucket.`);
   }
 
   exhaustedBuckets.forEach((bucket) => {
@@ -258,6 +269,8 @@ export function calculateRafPlan(input: {
 
   return {
     totalIncome: income.toFixed(2),
+    carryForward: carryForward.toFixed(2),
+    allocationBase: allocationBase.toFixed(2),
     totalPercent: configuredTotal.toFixed(2),
     allocated: totalAllocated.toFixed(2),
     unallocated: Decimal.max(unallocated, new Decimal(0)).toFixed(2),

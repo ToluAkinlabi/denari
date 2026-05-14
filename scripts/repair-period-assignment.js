@@ -9,15 +9,14 @@ const CYCLE_DAYS = 14;
 function getPayCycleIndex(date) {
   const d = startOfDay(date);
   const diff = differenceInCalendarDays(d, FIRST_PAYDAY);
-  if (diff > 0) return Math.ceil(diff / CYCLE_DAYS);
   return Math.floor(diff / CYCLE_DAYS);
 }
 
 function getPeriodForDate(date) {
   const index = getPayCycleIndex(date);
-  const endDate = addDays(FIRST_PAYDAY, index * CYCLE_DAYS);
-  const startDate = addDays(endDate, -(CYCLE_DAYS - 1));
-  return { index, startDate, endDate, payDate: endDate };
+  const startDate = addDays(FIRST_PAYDAY, index * CYCLE_DAYS);
+  const endDate = addDays(startDate, CYCLE_DAYS - 1);
+  return { index, startDate, endDate, payDate: startDate };
 }
 
 function formatLabel(startDate, endDate) {

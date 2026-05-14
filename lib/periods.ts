@@ -3,12 +3,12 @@
  * Biweekly pay period calculations and management
  */
 
-import { addDays, startOfDay } from 'date-fns';
+import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns';
 
 /**
  * First payday: January 9, 2026
  * Biweekly cycle: 14 days
- * First payday is the END of the first period (Period 0: Dec 27, 2025 - Jan 9, 2026)
+ * First payday is the START of period 0 (Period 0: Jan 9, 2026 - Jan 22, 2026)
  * Each period is 14 days with inclusive boundaries on both start and end dates
  */
 const FIRST_PAYDAY = new Date(2026, 0, 9); // Local date: Jan 9, 2026
@@ -16,36 +16,30 @@ const CYCLE_LENGTH_DAYS = 14;
 
 /**
  * Get the pay cycle index for a given date
- * Payday is the END of a period, so dates after payday belong to the next period
+ * Payday is the START of a period.
  */
 export function getPayCycleIndex(date: Date): number {
-  const daysSinceFirstPayday = Math.floor(
-    (date.getTime() - FIRST_PAYDAY.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  // If date is after the payday, it belongs to the next period
-  // Example: Jan 10 is 1 day after Jan 9 payday, so it's in Period 1, not Period 0
-  if (daysSinceFirstPayday > 0) {
-    return Math.ceil(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
-  }
-  
+  const normalizedDate = startOfDay(date);
+  const normalizedFirstPayday = startOfDay(FIRST_PAYDAY);
+  const daysSinceFirstPayday = differenceInCalendarDays(normalizedDate, normalizedFirstPayday);
+
   return Math.floor(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
 }
 
 /**
  * Get period start date from cycle index
- * Period 0 ends on FIRST_PAYDAY, so it starts 13 days before
+ * Period 0 starts on FIRST_PAYDAY.
  */
 export function getPeriodStartDate(cycleIndex: number): Date {
-  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS - (CYCLE_LENGTH_DAYS - 1)));
+  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
 }
 
 /**
  * Get period end date from cycle index
- * Each period ends on a payday
+ * Each period ends the day before the next payday.
  */
 export function getPeriodEndDate(cycleIndex: number): Date {
-  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
+  return startOfDay(addDays(getPeriodStartDate(cycleIndex), CYCLE_LENGTH_DAYS - 1));
 }
 
 /**
@@ -76,7 +70,7 @@ export function getPeriodForDate(date: Date): Period {
     cycleIndex,
     startDate,
     endDate,
-    payDate: endDate, // Payday is the end date, not start date
+    payDate: startDate,
     label: formatPeriodLabel(startDate, endDate),
   };
 }
@@ -122,14 +116,12 @@ export function getPeriodsInRange(startDate: Date, endDate: Date): Period[] {
  * Get the upcoming payday from today
  */
 export function getNextPayday(from: Date = new Date()): Date {
-  const currentPeriod = getPeriodForDate(from);
-
-  // If we're past the end of current period, move to next
-  if (from > currentPeriod.endDate) {
-    return getPeriodStartDate(currentPeriod.cycleIndex + 1);
+  const today = startOfDay(from);
+  const currentPeriod = getPeriodForDate(today);
+  if (today.getTime() === currentPeriod.payDate.getTime()) {
+    return currentPeriod.payDate;
   }
-
-  return currentPeriod.payDate;
+  return getPeriodStartDate(currentPeriod.cycleIndex + 1);
 }
 
 /**
