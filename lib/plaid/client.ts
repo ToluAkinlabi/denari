@@ -1,17 +1,17 @@
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 
 function resolvePlaidEnvironment(name: string) {
-  const normalized = name.toLowerCase();
+  const normalized = name.trim().toLowerCase();
   if (normalized === 'sandbox') return PlaidEnvironments.sandbox;
   if (normalized === 'development') return PlaidEnvironments.development;
-  if (normalized === 'production') return PlaidEnvironments.production;
+  if (normalized === 'production' || normalized === 'prod') return PlaidEnvironments.production;
   return PlaidEnvironments.sandbox;
 }
 
 export function createPlaidClient() {
   const clientId = process.env.PLAID_CLIENT_ID;
   const secret = process.env.PLAID_SECRET;
-  const env = process.env.PLAID_ENV ?? 'sandbox';
+  const env = process.env.PLAID_ENV?.trim() ?? 'sandbox';
 
   if (!clientId || !secret) {
     throw new Error('PLAID_CLIENT_ID and PLAID_SECRET must be configured.');

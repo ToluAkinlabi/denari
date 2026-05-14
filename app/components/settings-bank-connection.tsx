@@ -16,6 +16,28 @@ interface ConnectionStatus {
   institutionName?: string;
 }
 
+function getPlaidErrorHelp(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('invalid_input') || normalized.includes('invalid_field')) {
+    return 'Plaid rejected one of the request fields. Check your Plaid Dashboard settings and redirect URL configuration.';
+  }
+
+  if (normalized.includes('invalid_api_keys') || normalized.includes('invalid client_id')) {
+    return 'Your Plaid credentials or environment do not match. Confirm PLAID_ENV, PLAID_CLIENT_ID, and PLAID_SECRET in production.';
+  }
+
+  if (normalized.includes('oauth') || normalized.includes('redirect_uri')) {
+    return 'OAuth institutions require a valid redirect URL. Set PLAID_REDIRECT_URI to the exact URL configured in Plaid Dashboard.';
+  }
+
+  if (normalized.includes('400')) {
+    return 'Plaid returned a bad request. Review your server env vars and use the detailed error text above to pinpoint the field issue.';
+  }
+
+  return '';
+}
+
 export function SettingsBankConnection() {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,8 +217,12 @@ export function SettingsBankConnection() {
 
         {/* Error Message */}
         {error && (
-          <div className="py-3 px-3 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-200 rounded text-sm border border-red-200 dark:border-red-800">
-            {error}
+          <div className="py-3 px-3 bg-red-50/80 dark:bg-red-950/60 text-red-800 dark:text-red-100 rounded-md text-sm border border-red-200 dark:border-red-800 space-y-1.5">
+            <p className="font-semibold">Connection issue</p>
+            <p>{error}</p>
+            {getPlaidErrorHelp(error) && (
+              <p className="text-xs text-red-700 dark:text-red-200">{getPlaidErrorHelp(error)}</p>
+            )}
           </div>
         )}
 

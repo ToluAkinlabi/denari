@@ -15,6 +15,38 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+function extractPlaidErrorMessage(error: unknown, fallback: string) {
+  const maybeError = error as {
+    message?: string;
+    response?: {
+      data?: {
+        error_type?: string;
+        error_code?: string;
+        error_message?: string;
+        display_message?: string | null;
+      };
+    };
+  };
+
+  const plaidData = maybeError.response?.data;
+  if (plaidData) {
+    const details = [plaidData.error_type, plaidData.error_code, plaidData.error_message]
+      .filter((value): value is string => Boolean(value && value.trim().length > 0))
+      .join(' - ');
+
+    if (details) {
+      return `${fallback}: ${details}`;
+    }
+  }
+
+  const message = maybeError.message?.trim();
+  if (message) {
+    return `${fallback}: ${message}`;
+  }
+
+  return fallback;
+}
+
 async function ensureUnassignedCategory(userId: string) {
   const existing = await categoriesRepo.getCategoryByName(userId, 'Unassigned');
   if (existing) return existing;
@@ -59,6 +91,8 @@ export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse
   try {
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const client = createPlaidClient();
+    const redirectUri = process.env.PLAID_REDIRECT_URI?.trim();
+    const webhook = process.env.PLAID_WEBHOOK_URL?.trim();
 
     const response = await client.linkTokenCreate({
       user: { client_user_id: resolvedUserId },
@@ -66,6 +100,8 @@ export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse
       language: 'en',
       country_codes: [CountryCode.Us],
       products: [Products.Transactions],
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+      ...(webhook ? { webhook } : {}),
     });
 
     return {
@@ -77,7 +113,7 @@ export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse
   } catch (error) {
     return {
       success: false,
-      error: `Could not create Plaid link token: ${(error as Error).message}`,
+      error: extractPlaidErrorMessage(error, 'Could not create Plaid link token'),
     };
   }
 }
@@ -111,7 +147,7 @@ export async function exchangePlaidPublicToken(input: {
   } catch (error) {
     return {
       success: false,
-      error: `Could not connect bank account: ${(error as Error).message}`,
+      error: extractPlaidErrorMessage(error, 'Could not connect bank account'),
     };
   }
 }
@@ -211,7 +247,7 @@ export async function syncPlaidTransactions(userId?: string): Promise<ApiRespons
   } catch (error) {
     return {
       success: false,
-      error: `Could not sync transactions: ${(error as Error).message}`,
+      error: extractPlaidErrorMessage(error, 'Could not sync transactions'),
     };
   }
 }

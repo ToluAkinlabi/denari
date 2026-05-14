@@ -11,7 +11,33 @@ interface DashboardContentProps {
   data: DashboardData;
 }
 
+function parseAiBriefing(summary: string) {
+  const normalized = summary.replace(/\*\*/g, '').replace(/\r/g, '').trim();
+  if (!normalized) {
+    return { insights: '', actions: [] as string[] };
+  }
+
+  const actionsMarker = /recommended actions:\s*/i;
+  const insightsMarker = /key insights:\s*/i;
+
+  const split = normalized.split(actionsMarker);
+  const insightsPart = split[0]?.replace(insightsMarker, '').replace(/\n+/g, ' ').trim() ?? '';
+  const actionsPart = split.length > 1 ? split.slice(1).join(' ').trim() : '';
+
+  const actions = actionsPart
+    .replace(/\n+/g, ' • ')
+    .split('•')
+    .map((item) => item.replace(/^[-*]\s*/, '').trim())
+    .filter((item) => item.length > 0);
+
+  return {
+    insights: insightsPart,
+    actions,
+  };
+}
+
 export function DashboardContent({ data }: DashboardContentProps) {
+  const aiBriefing = parseAiBriefing(data.aiInsight.summary);
   const score = Number(data.scorecard.overall);
   const health = getHealthIndicator(score);
   const periodStart = new Date(data.currentPeriod.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' });
@@ -312,9 +338,25 @@ export function DashboardContent({ data }: DashboardContentProps) {
           </span>
         </h3>
         <div className="space-y-3">
-          <p className={`text-sm leading-relaxed ${aiSummaryClass}`}>
-            {data.aiInsight.summary}
-          </p>
+          <div className="rounded-lg border border-gray-700/80 bg-black/20 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90 mb-1">Key Insights</p>
+            <p className={`text-sm leading-relaxed ${aiSummaryClass}`}>
+              {aiBriefing.insights || data.aiInsight.summary}
+            </p>
+          </div>
+
+          {aiBriefing.actions.length > 0 && (
+            <div className="rounded-lg border border-gray-700/80 bg-black/20 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-200/90 mb-2">Recommended Actions</p>
+              <ul className="space-y-1.5">
+                {aiBriefing.actions.slice(0, 6).map((action, index) => (
+                  <li key={`${action}-${index}`} className="text-sm text-gray-100 leading-relaxed">
+                    • {action}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-lg border border-gray-700 px-2 py-2">
