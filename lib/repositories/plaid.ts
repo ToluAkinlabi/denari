@@ -1,10 +1,34 @@
 import { prisma } from '@/lib/db';
 import { Prisma, type ImportedTransactionReviewStatus } from '@prisma/client';
+import { decryptSensitiveValue, encryptSensitiveValue } from '@/lib/security/field-encryption';
 
 export async function getPlaidConnectionForUser(userId: string) {
-  return prisma.plaidConnection.findUnique({
+  const connection = await prisma.plaidConnection.findUnique({
     where: { userId },
   });
+
+  if (!connection) {
+    return null;
+  }
+
+  const accessToken = decryptSensitiveValue(connection.accessToken);
+  const cursor = connection.cursor ? decryptSensitiveValue(connection.cursor) : null;
+
+  if (accessToken !== connection.accessToken || cursor !== connection.cursor) {
+    await prisma.plaidConnection.update({
+      where: { userId },
+      data: {
+        accessToken: encryptSensitiveValue(accessToken),
+        cursor: cursor ? encryptSensitiveValue(cursor) : null,
+      },
+    });
+  }
+
+  return {
+    ...connection,
+    accessToken,
+    cursor,
+  };
 }
 
 export async function upsertPlaidConnection(input: {
@@ -17,13 +41,13 @@ export async function upsertPlaidConnection(input: {
     where: { userId: input.userId },
     update: {
       itemId: input.itemId,
-      accessToken: input.accessToken,
+      accessToken: encryptSensitiveValue(input.accessToken),
       institutionName: input.institutionName,
     },
     create: {
       userId: input.userId,
       itemId: input.itemId,
-      accessToken: input.accessToken,
+      accessToken: encryptSensitiveValue(input.accessToken),
       institutionName: input.institutionName,
     },
   });
@@ -32,7 +56,7 @@ export async function upsertPlaidConnection(input: {
 export async function updatePlaidCursor(userId: string, cursor: string | null) {
   return prisma.plaidConnection.updateMany({
     where: { userId },
-    data: { cursor },
+    data: { cursor: cursor ? encryptSensitiveValue(cursor) : null },
   });
 }
 

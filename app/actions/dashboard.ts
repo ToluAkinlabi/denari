@@ -314,6 +314,9 @@ export async function getDashboardData(
       currentSpending,
       currentSavings
     );
+    const effectiveCashEnding = currentPeriod.status === 'RECONCILED' && currentPeriod.closingCashActual != null
+      ? currentPeriod.closingCashActual
+      : currentCashEnding;
     const currentWealth = calculateWealthCreated(currentIncome, currentSpending);
 
     // Cash reconciliation
@@ -838,7 +841,7 @@ export async function getDashboardData(
         income: currentIncome.toFixed(2),
         spending: currentSpending.toFixed(2),
         savings: currentSavings.toFixed(2),
-        ending: currentCashEnding.toFixed(2),
+        ending: effectiveCashEnding.toFixed(2),
         isBalanced,
         balanceError: balanceError.toFixed(2),
       },

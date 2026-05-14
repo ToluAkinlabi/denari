@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import * as usersRepo from '@/lib/repositories/users';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as periodsRepo from '@/lib/repositories/periods';
+import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import { createPlaidClient } from '@/lib/plaid/client';
 
@@ -218,18 +219,55 @@ export async function syncPlaidTransactions(userId?: string): Promise<ApiRespons
   }
 }
 
-export async function getBankReviewQueue(userId?: string): Promise<ApiResponse<{ transactions: Array<{ id: string; date: string; amount: string; name: string; merchantName?: string; pending: boolean; reviewStatus: string; categoryId?: string; categoryName?: string; includeInRaf: boolean }>; categories: Array<{ id: string; name: string }> }>> {
+export async function getBankReviewQueue(userId?: string): Promise<ApiResponse<{ transactions: Array<{ id: string; date: string; amount: string; name: string; merchantName?: string; pending: boolean; reviewStatus: string; categoryId?: string; categoryName?: string; includeInRaf: boolean; duplicateCategoryCounts: Array<{ categoryId: string; categoryName: string; count: number }> }>; categories: Array<{ id: string; name: string }> }>> {
   try {
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const [transactions, categories] = await Promise.all([
       plaidRepo.getImportedTransactionsForReview(resolvedUserId),
       categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
     ]);
+    const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+    const periodCountsCache = new Map<string, Map<string, number>>();
+
+    const transactionsWithDuplicates = await Promise.all(
+      transactions.map(async (tx) => {
+        const period = await periodsRepo.getPeriodForDateAndUser(resolvedUserId, tx.date);
+        if (!period) {
+          return {
+            ...tx,
+            duplicateCategoryCounts: [],
+          };
+        }
+
+        let categoryCounts = periodCountsCache.get(period.id);
+        if (!categoryCounts) {
+          const periodEntries = await ledgerRepo.getLedgerEntriesForPeriod(period.id);
+          categoryCounts = periodEntries.reduce((counts, entry) => {
+            if (entry.categoryId) {
+              counts.set(entry.categoryId, (counts.get(entry.categoryId) ?? 0) + 1);
+            }
+            return counts;
+          }, new Map<string, number>());
+          periodCountsCache.set(period.id, categoryCounts);
+        }
+
+        return {
+          ...tx,
+          duplicateCategoryCounts: [...categoryCounts.entries()]
+            .filter(([, count]) => count > 0)
+            .map(([categoryId, count]) => ({
+              categoryId,
+              categoryName: categoryNameById.get(categoryId) ?? 'Unknown',
+              count,
+            })),
+        };
+      })
+    );
 
     return {
       success: true,
       data: {
-        transactions: transactions.map((tx) => ({
+        transactions: transactionsWithDuplicates.map((tx) => ({
           id: tx.id,
           date: tx.date.toISOString(),
           amount: tx.amount.toFixed(2),
@@ -240,6 +278,7 @@ export async function getBankReviewQueue(userId?: string): Promise<ApiResponse<{
           categoryId: tx.categoryId ?? undefined,
           categoryName: tx.category?.name ?? undefined,
           includeInRaf: tx.includeInRaf,
+          duplicateCategoryCounts: tx.duplicateCategoryCounts,
         })),
         categories: categories
           .filter((category) => category.type !== 'INCOME')

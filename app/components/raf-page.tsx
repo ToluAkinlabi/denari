@@ -11,6 +11,24 @@ interface RafPageContentProps {
   data: RafPageData;
 }
 
+function getBucketFillWidthClass(fillPct: number, hasNoAllocation: boolean) {
+  if (hasNoAllocation) {
+    return 'w-full';
+  }
+
+  if (fillPct >= 100) return 'w-full';
+  if (fillPct >= 90) return 'w-[90%]';
+  if (fillPct >= 80) return 'w-[80%]';
+  if (fillPct >= 70) return 'w-[70%]';
+  if (fillPct >= 60) return 'w-[60%]';
+  if (fillPct >= 50) return 'w-[50%]';
+  if (fillPct >= 40) return 'w-[40%]';
+  if (fillPct >= 30) return 'w-[30%]';
+  if (fillPct >= 20) return 'w-[20%]';
+  if (fillPct >= 10) return 'w-[10%]';
+  return 'w-[2%]';
+}
+
 export function RafPageContent({ data }: RafPageContentProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -118,7 +136,9 @@ export function RafPageContent({ data }: RafPageContentProps) {
               ${data.allocationBase}
             </p>
             <p className="text-xs text-muted mt-1">
-              Income ${data.income} + carry forward ${data.carryForward} · {data.periodProgressPercent}% of period elapsed
+              {data.isReconciled
+                ? `Anchored to actual closing balance ${data.carryForward} · ${data.periodProgressPercent}% of period elapsed`
+                : `Income ${data.income} + carry forward ${data.carryForward} · ${data.periodProgressPercent}% of period elapsed`}
             </p>
           </>
         ) : (
@@ -146,8 +166,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
             const remaining = Number(bucket.remaining);
             const hasNoAllocation = allocated <= 0;
             const fillPct = hasNoAllocation ? 100 : Math.min(100, Math.max(0, (spent / allocated) * 100));
-            const visibleFillPct = hasNoAllocation ? 100 : fillPct === 0 ? 1.5 : Math.max(fillPct, 1.5);
             const fillClass = hasNoAllocation ? 'bg-slate-500/70' : bucketBarColor(bucket.status);
+            const widthClass = getBucketFillWidthClass(fillPct, hasNoAllocation);
 
             return (
               <Card key={bucket.categoryId} className="p-3">
@@ -165,8 +185,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-1.5">
                   <div
-                    className={`h-1.5 rounded-full ${fillClass}`}
-                    style={{ width: `${visibleFillPct}%` }}
+                    className={`h-1.5 rounded-full ${fillClass} ${widthClass}`}
                   />
                 </div>
               </Card>
@@ -203,6 +222,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
           <div>
             <label className="text-[11px] text-muted block mb-1">From</label>
             <select
+              aria-label="Select source bucket"
               className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
@@ -222,6 +242,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
           <div>
             <label className="text-[11px] text-muted block mb-1">To</label>
             <select
+              aria-label="Select destination bucket"
               className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
               value={toId}
               onChange={(e) => setToId(e.target.value)}

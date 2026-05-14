@@ -40,6 +40,7 @@ interface BankQueueTransaction {
   categoryId?: string;
   categoryName?: string;
   includeInRaf: boolean;
+  duplicateCategoryCounts: Array<{ categoryId: string; categoryName: string; count: number }>;
 }
 
 export default function TransactionsPage() {
@@ -298,6 +299,7 @@ export default function TransactionsPage() {
             <div className="space-y-2">
               {bankQueue.map((tx) => {
                 const selectedCategoryId = bankCategorySelections[tx.id] ?? tx.categoryId ?? '';
+                const duplicateMatch = tx.duplicateCategoryCounts.find((item) => item.categoryId === selectedCategoryId);
                 return (
                   <div key={tx.id} className="rounded-lg border border-gray-700 px-3 py-2 space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -314,6 +316,11 @@ export default function TransactionsPage() {
                             ? 'Unassigned (included in RAF)'
                             : `Categorized: ${tx.categoryName ?? 'Unknown'}`}
                         </p>
+                        {duplicateMatch && (
+                          <p className="mt-1 inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
+                            Possible duplicate: {duplicateMatch.count} existing {duplicateMatch.count === 1 ? 'entry' : 'entries'} in {duplicateMatch.categoryName}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -326,6 +333,7 @@ export default function TransactionsPage() {
                             [tx.id]: e.target.value,
                           }))
                         }
+                        aria-label={`Select category for ${tx.merchantName || tx.name}`}
                         className="rounded-md border border-gray-700 bg-[#2a2a2a] text-xs px-2 py-1.5 text-gray-100"
                       >
                         <option value="">Select category</option>
