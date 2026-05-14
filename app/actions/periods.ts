@@ -8,6 +8,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { Decimal } from '@prisma/client/runtime/library';
+import { startOfDay, endOfDay } from 'date-fns';
 import {
   reconciliationSchema,
   periodOpeningCashSchema,
@@ -18,6 +19,7 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as usersRepo from '@/lib/repositories/users';
+import * as plaidRepo from '@/lib/repositories/plaid';
 import {
   calculateExpectedCash,
   calculateReconciliationDifference,
@@ -33,6 +35,7 @@ import { getPayCycleIndex } from '@/lib/periods';
  * Cascade-recalculate openingCash and closingCashExpected for ALL periods for a user.
  * Respects closingCashActual as an anchor: if a period has an actual closing value,
  * the next period opens from that value rather than the calculated expected.
+ * Includes imported transactions marked as includeInRaf in all calculations.
  */
 async function cascadeRecalculateAllPeriods(userId: string): Promise<void> {
   const allPeriodsDesc = await periodsRepo.getRecentPeriods(userId, 9999);
@@ -52,8 +55,27 @@ async function cascadeRecalculateAllPeriods(userId: string): Promise<void> {
   let carry = periods.length > 0 ? new Decimal(periods[0].openingCash.toString()) : new Decimal(0);
   for (const period of periods) {
     const entries = (period as { ledgerEntries?: unknown[] }).ledgerEntries ?? [];
+    
+    // Fetch imported transactions for this period
+    const importedEntries = await plaidRepo.getIncludedImportedTransactionsForDateRange(
+      userId,
+      startOfDay(period.startDate),
+      endOfDay(period.endDate)
+    );
+    
+    // Combine with ledger entries for calculations
+    const allEntries = [
+      ...entries,
+      ...importedEntries.map((entry) => ({
+        entryType: 'EXPENSE' as const,
+        amount: entry.amount,
+        categoryId: entry.categoryId,
+        category: { countsAsExpense: true, countsAsSavings: false },
+      })),
+    ];
+    
     const income = calculateIncome(entries as Parameters<typeof calculateIncome>[0]);
-    const spending = calculateTotalSpending(entries as Parameters<typeof calculateTotalSpending>[0], categoryMap);
+    const spending = calculateTotalSpending(allEntries as Parameters<typeof calculateTotalSpending>[0], categoryMap);
     const savings = calculateSavingsTransfers(entries as Parameters<typeof calculateSavingsTransfers>[0], categoryMap);
     const closingExpected = carry.plus(income).minus(spending).minus(savings);
 
@@ -135,8 +157,27 @@ export async function reconcilePeriod(
     });
 
     const entries = await ledgerRepo.getLedgerEntriesForPeriod(data.periodId);
+    
+    // Fetch imported transactions for this period and include them in reconciliation calculation
+    const importedEntries = await plaidRepo.getIncludedImportedTransactionsForDateRange(
+      resolvedUserId,
+      startOfDay(period.startDate),
+      endOfDay(period.endDate)
+    );
+    
+    // Combine all entries for spending calculation (imported are always expenses)
+    const allEntries = [
+      ...entries,
+      ...importedEntries.map((entry) => ({
+        entryType: 'EXPENSE' as const,
+        amount: entry.amount,
+        categoryId: entry.categoryId,
+        category: { countsAsExpense: true, countsAsSavings: false },
+      })),
+    ];
+    
     const income = calculateIncome(entries);
-    const spending = calculateTotalSpending(entries, categoryMap);
+    const spending = calculateTotalSpending(allEntries as Parameters<typeof calculateTotalSpending>[0], categoryMap);
     const savings = calculateSavingsTransfers(entries, categoryMap);
     const expectedCash = calculateExpectedCash(period.openingCash, income, spending, savings);
     const actualCash = new Decimal(data.actualCash);

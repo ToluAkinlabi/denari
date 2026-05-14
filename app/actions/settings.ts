@@ -163,9 +163,15 @@ export async function applyRafTransferSuggestion(input: {
     }
 
     const currentIncome = calculateIncome(allEntries);
+    
+    // Use reconciled actual cash for RAF plan if period is anchored, otherwise use opening cash
+    const rafCarryForward = currentPeriod.status === 'RECONCILED' && currentPeriod.closingCashActual != null
+      ? currentPeriod.closingCashActual
+      : currentPeriod.openingCash;
+    
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
-      carryForward: currentPeriod.openingCash,
+      carryForward: rafCarryForward,
       entries: allEntries.map((entry) => ({ categoryId: entry.categoryId, amount: entry.amount })),
       categories: categories.map((category) => ({
         id: category.id,

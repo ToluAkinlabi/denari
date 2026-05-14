@@ -43,9 +43,18 @@ import {
   gradeScore,
 } from '@/lib/finance/scorecard';
 import { forecastNextPeriod, getForecastWarnings } from '@/lib/finance/forecast';
-import { forecastNextPeriodEnhanced, type CategoryForecast } from '@/lib/finance/forecast-enhanced';
+import { forecastNextPeriodEnhanced } from '@/lib/finance/forecast-enhanced';
 import { buildCategoryHistory, buildSavingsHistory } from '@/lib/finance/forecast-builder';
 import { getDailyInsight } from '@/lib/ai/daily-insight';
+
+interface SerializedCategoryForecast {
+  categoryId: string;
+  categoryName: string;
+  strategy: string;
+  forecast: { min: string; likely: string; max: string };
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  notes?: string;
+}
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -140,7 +149,7 @@ export interface DashboardData {
     nextWealth: string;
     nextEndingCash: string;
     warnings: string[];
-    categoryBreakdown?: CategoryForecast[];
+    categoryBreakdown?: SerializedCategoryForecast[];
   };
   aiInsight: {
     summary: string;
@@ -361,9 +370,15 @@ export async function getDashboardData(
       status: paceStatus,
     };
 
+    // For RAF calculations: use reconciled actual cash if available (period is anchored),
+    // otherwise use the calculated opening cash for consistency across all modules
+    const rafCarryForward = currentPeriod.status === 'RECONCILED' && currentPeriod.closingCashActual != null
+      ? currentPeriod.closingCashActual
+      : currentPeriod.openingCash;
+
     const baseRafPlan = calculateRafPlan({
       income: currentIncome,
-      carryForward: currentPeriod.openingCash,
+      carryForward: rafCarryForward,
       entries: currentEntriesWithImported.map((entry) => ({
         categoryId: entry.categoryId,
         amount: entry.amount,
@@ -588,8 +603,9 @@ export async function getDashboardData(
         );
 
         // Use enhanced forecast with category-level intelligence
+        // Use effectiveCashEnding (reconciled actual if available) as forecast seed
         const enhancedResult = forecastNextPeriodEnhanced({
-          currentCash: currentCashEnding,
+          currentCash: effectiveCashEnding,
           incomeCategories,
           spendingCategories,
           savingsCategories,
@@ -630,7 +646,18 @@ export async function getDashboardData(
           nextWealth: enhancedResult.wealthCreated.likely.toFixed(2),
           nextEndingCash: enhancedResult.endingCash.likely.toFixed(2),
           warnings: enhancedResult.warnings,
-          categoryBreakdown: enhancedResult.categoryBreakdown,
+          categoryBreakdown: enhancedResult.categoryBreakdown.map((category) => ({
+            categoryId: category.categoryId,
+            categoryName: category.categoryName,
+            strategy: category.strategy,
+            forecast: {
+              min: category.forecast.min.toFixed(2),
+              likely: category.forecast.likely.toFixed(2),
+              max: category.forecast.max.toFixed(2),
+            },
+            confidence: category.confidence,
+            notes: category.notes,
+          })),
         };
       } catch (error) {
         // Fallback to simple forecast if enhanced fails
@@ -640,8 +667,9 @@ export async function getDashboardData(
         const recentSpending = recentData.map((d) => d.spending);
         const recentSavings = recentData.map((d) => d.savings);
 
+        // Use effectiveCashEnding (reconciled actual if available) as forecast seed
         const forecastResult = forecastNextPeriod({
-          currentCash: currentCashEnding,
+          currentCash: effectiveCashEnding,
           recentIncome,
           recentSpending,
           recentSavings,

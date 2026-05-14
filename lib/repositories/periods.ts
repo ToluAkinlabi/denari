@@ -10,8 +10,9 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
-import { startOfDay } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 import { formatPeriodLabel, getPeriodForDate } from '@/lib/periods';
+import * as plaidRepo from './plaid';
 
 function pickBestMatchingPeriod<T extends { startDate: Date; endDate: Date; ledgerEntries: unknown[] }>(
   periods: T[],
@@ -39,7 +40,10 @@ function pickBestMatchingPeriod<T extends { startDate: Date; endDate: Date; ledg
   return best;
 }
 
-async function computeCarryForwardForPeriod(periodId: string): Promise<Decimal> {
+async function computeCarryForwardForPeriod(
+  periodId: string,
+  importedEntries?: Array<{ amount: Decimal | number; categoryId?: string | null; category?: { countsAsExpense?: boolean | null; countsAsSavings?: boolean | null } | null }>
+): Promise<Decimal> {
   const period = await prisma.period.findUnique({
     where: { id: periodId },
     include: {
@@ -55,15 +59,25 @@ async function computeCarryForwardForPeriod(periodId: string): Promise<Decimal> 
     return new Decimal(0);
   }
 
-  const income = period.ledgerEntries
+  // Combine ledger entries with optional imported entries
+  const allEntries = [
+    ...period.ledgerEntries,
+    ...(importedEntries ?? []).map((entry) => ({
+      entryType: 'EXPENSE' as const,
+      amount: entry.amount,
+      category: entry.category,
+    })),
+  ];
+
+  const income = allEntries
     .filter((entry) => entry.entryType === 'INCOME')
     .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
 
-  const spending = period.ledgerEntries
+  const spending = allEntries
     .filter((entry) => entry.category?.countsAsExpense)
     .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
 
-  const savings = period.ledgerEntries
+  const savings = allEntries
     .filter((entry) => entry.category?.countsAsSavings)
     .reduce((sum, entry) => sum.plus(entry.amount), new Decimal(0));
 
@@ -257,8 +271,16 @@ export async function ensurePeriodForDateAndUser(userId: string, date: Date) {
   if (previousPeriod && previousPeriod.closingCashActual) {
     openingCash = previousPeriod.closingCashActual;
   } else if (previousPeriod) {
+    // Fetch imported transactions for previous period to include in carry-forward calculation
+    const previousPeriodEnd = endOfDay(previousPeriod.endDate);
+    const importedEntriesPrevPeriod = await plaidRepo.getIncludedImportedTransactionsForDateRange(
+      userId,
+      startOfDay(previousPeriod.startDate),
+      previousPeriodEnd
+    );
+    
     // Recompute expected closing cash from opening cash plus actual activity.
-    const closingCashExpected = await computeCarryForwardForPeriod(previousPeriod.id);
+    const closingCashExpected = await computeCarryForwardForPeriod(previousPeriod.id, importedEntriesPrevPeriod);
     openingCash = closingCashExpected;
 
     // Persist computed closing cash on previous period for auditability/reporting.

@@ -54,16 +54,16 @@ export interface DailyInsightResult {
 function fallbackInsight(input: DailyInsightInput): string {
   const paceLabel =
     input.paceStatus === 'RED'
-      ? 'Your pace is running hot right now.'
+      ? 'Running hot'
       : input.paceStatus === 'YELLOW'
-      ? 'Your pace is close to plan.'
-      : 'Your pace is under control.';
+      ? 'Near pace'
+      : 'Under control';
 
-  const rafText = input.rafWarnings.length > 0
-    ? ` RAF is ${input.rafProfileSource.toLowerCase()} and has ${input.rafWarnings.length} warning${input.rafWarnings.length === 1 ? '' : 's'}.`
-    : ` RAF is ${input.rafProfileSource.toLowerCase()} with ${input.rafTotalPercent}% allocated across buckets.`;
+  const rafStatus = input.rafWarnings.length > 0
+    ? `${input.rafWarnings.length} pressure point${input.rafWarnings.length === 1 ? '' : 's'}`
+    : `${input.rafTotalPercent}% allocated`;
 
-  return `${paceLabel}${rafText} Guidance confidence is ${input.guidanceConfidence.toLowerCase()} (${input.guidanceConfidenceReason}). Protect ${input.priorityBucketName} first (${input.priorityBucketStatus.toLowerCase()} with $${input.priorityBucketRemaining} left), and keep discretionary spend near $${input.suggestedDailySpendCap}/day for the next ${input.daysRemaining} day(s). Weekly pressure signal: ${input.weeklyTrendSummary}; transfer idea: ${input.transferSuggestionSummary || 'none'}.`;
+  return `**Key Insights:**\n${paceLabel}—spending is ${input.paceStatus === 'RED' ? 'running above' : input.paceStatus === 'YELLOW' ? 'near' : 'below'} pace. RAF is ${input.rafProfileSource.toLowerCase()} with ${rafStatus}. Next period projects ~$${input.forecastEndingCash} cash.\n\n**Recommended Actions:**\n• Aim for $${input.suggestedDailySpendCap}/day discretionary spend over the next ${input.daysRemaining} day(s)\n• Protect ${input.priorityBucketName} first (${input.priorityBucketStatus.toLowerCase()})\n${input.transferSuggestionSummary ? `• Consider: ${input.transferSuggestionSummary}` : ''}\n• Monitor weekly pressure: ${input.weeklyTrendSummary}`;
 }
 
 async function generateInsightWithClaude(input: DailyInsightInput): Promise<DailyInsightResult> {
@@ -79,19 +79,33 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
   }
 
   const prompt = [
-    'You are a personal finance coach writing a concise, decision-oriented daily briefing.',
-    'Write EXACTLY 4 sentences.',
-    'Do not invent numbers. Use only the values provided below.',
-    'Do not simply restate all totals; convert them into guidance and trade-offs.',
-    'Always include at least 4 numeric values in the response.',
-    'Use a single timeframe: this pay period plus the next-period projection. Do not mix unrelated horizons.',
-    'Treat scenario amounts as bounded what-if adjustments, not recommendations to skip commitments.',
-    'Keep tone practical, plain English, and action-first.',
-    'Sentence 1: RAF status plus pace view. State total RAF percentage, allocated income, unallocated/overallocated cash, and current pace.',
-    'Sentence 2: call out the weekly RAF pressure trend and the most pressured buckets by name.',
-    'Sentence 3: one concrete next-24-hour action that protects the priority bucket and uses the provided spend-cap guidance.',
-    'Sentence 4: mention guidance confidence, one transfer suggestion if available, and tie it to the action.',
-    'Avoid phrases like "skip commitments" unless clearly marked as emergency-only and temporary.',
+    'You are a personal finance coach writing concise, actionable daily briefings.',
+    '',
+    'STRUCTURE YOUR RESPONSE EXACTLY AS:',
+    '**Key Insights:**',
+    '[2-3 sentences of solid financial insights]',
+    '',
+    '**Recommended Actions:**',
+    '[4-6 bulleted items with specific, actionable guidance]',
+    '',
+    'KEY PRINCIPLES:',
+    '• Do not invent numbers. Use ONLY the values provided below.',
+    '• Make each insight concrete and connected to today\'s financial position.',
+    '• Convert totals into meaningful trade-offs and risks.',
+    '• Always lead with the most important pattern or risk.',
+    '• Use plain, direct language focused on decisions.',
+    '• Each action should be a complete sentence starting with a verb.',
+    '',
+    'INSIGHTS GUIDANCE:',
+    'Focus on: (1) pace status vs. RAF allocation match, (2) top pressure bucket + recommended response, (3) next-period risk if trends continue.',
+    'Mention specific numbers: income, pace, cash remaining, forecast cash.',
+    '',
+    'ACTIONS GUIDANCE:',
+    '• Include a concrete daily spend cap based on days remaining.',
+    '• Name the priority bucket to protect.',
+    '• Mention the top pressure or opportunity.',
+    '• Suggest a transfer if one is available.',
+    '• Flag any high-risk scenarios.',
     '',
     `Current period: day ${input.periodDay} of ${input.totalDays}`,
     `Income: $${input.income}`,
@@ -113,14 +127,12 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
     `RAF total percent: ${input.rafTotalPercent}%`,
     `RAF allocated from current income: $${input.rafAllocated}`,
     `RAF unallocated cash: $${input.rafUnallocated}`,
-    `RAF overallocated amount: $${input.rafOverallocated}`,
+    `RAF overallocated amount: ${input.rafOverallocated}`,
     `Days remaining in period: ${input.daysRemaining}`,
     `Suggested daily discretionary spend cap: $${input.suggestedDailySpendCap}`,
     `Priority bucket to protect: ${input.priorityBucketName}`,
     `Priority bucket status: ${input.priorityBucketStatus}`,
     `Priority bucket remaining: $${input.priorityBucketRemaining}`,
-    `Guidance confidence: ${input.guidanceConfidence}`,
-    `Guidance confidence reason: ${input.guidanceConfidenceReason}`,
     `Weekly RAF trend summary: ${input.weeklyTrendSummary}`,
     `Weekly RAF trend buckets: ${input.weeklyTrendBuckets || 'none'}`,
     `Safe transfer suggestions: ${input.transferSuggestionSummary || 'none'}`,
@@ -146,7 +158,7 @@ async function generateInsightWithClaude(input: DailyInsightInput): Promise<Dail
       },
       body: JSON.stringify({
         model,
-        max_tokens: 180,
+        max_tokens: 280,
         temperature: 0.2,
         messages: [
           {

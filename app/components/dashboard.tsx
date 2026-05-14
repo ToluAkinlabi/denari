@@ -205,7 +205,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
       </Card>
 
       <Link href="/raf">
-        <Card className={`p-4 ${rafCardAccentClass} hover:opacity-90 transition-opacity cursor-pointer`}>
+        <Card className={`p-4 mt-6 ${rafCardAccentClass} hover:opacity-90 transition-opacity cursor-pointer`}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted uppercase tracking-wide mb-1">RAF Allocation</p>

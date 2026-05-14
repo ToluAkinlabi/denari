@@ -66,9 +66,6 @@ export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse
       language: 'en',
       country_codes: [CountryCode.Us],
       products: [Products.Transactions],
-      transactions: {
-        days_requested: 730,
-      },
     });
 
     return {
