@@ -45,9 +45,46 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+const DB_RETRY_ATTEMPTS = 2;
+const DB_RETRY_DELAY_MS = 1200;
+
+function isDatabaseUnavailableError(error: unknown): boolean {
+  const message = (error as Error)?.message ?? '';
+  return (
+    message.includes("Can't reach database server") ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('ENOTFOUND') ||
+    message.includes('ETIMEDOUT')
+  );
+}
+
+async function wait(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withDatabaseRetry<T>(operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= DB_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (!isDatabaseUnavailableError(error) || attempt === DB_RETRY_ATTEMPTS) {
+        throw error;
+      }
+
+      await wait(DB_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Unknown database error');
+}
+
 export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPageData>> {
   try {
-    const resolvedUserId = await usersRepo.resolveUserId(userId);
+    const resolvedUserId = await withDatabaseRetry(() => usersRepo.resolveUserId(userId));
 
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
     if (!currentPeriod) {
@@ -154,6 +191,14 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
       },
     };
   } catch (error) {
+    if (isDatabaseUnavailableError(error)) {
+      return {
+        success: false,
+        error:
+          'Database is temporarily unreachable. If you use Neon, wake the project and verify DATABASE_URL, then refresh RAF.',
+      };
+    }
+
     return { success: false, error: `Server error: ${(error as Error).message}` };
   }
 }
