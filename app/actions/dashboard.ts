@@ -387,6 +387,7 @@ export async function getDashboardData(
         id: category.id,
         name: category.name,
         type: category.type,
+        expectedFrequency: category.expectedFrequency,
         countsAsExpense: category.countsAsExpense ?? false,
         countsAsSavings: category.countsAsSavings ?? false,
         rafPercent: category.rafPercent,

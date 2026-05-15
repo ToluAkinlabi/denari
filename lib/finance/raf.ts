@@ -1,17 +1,23 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
 const DEFAULT_RAF_PERCENT_BY_NAME: Record<string, number> = {
-  Rent: 28,
-  Grocery: 5,
-  Phone: 4,
-  Debt: 10,
-  Other: 3,
-  Spend: 15,
-  Misc: 5,
-  Partnership: 15,
-  Savings: 10,
-  Investment: 5,
+  // Non-rent buckets are treated as relative weights over remaining allocation
+  // after fixed monthly rent funding is applied.
+  Rent: 0,
+  Grocery: 7,
+  Phone: 5,
+  Debt: 14,
+  Other: 4,
+  Spend: 21,
+  Misc: 7,
+  Partnership: 20,
+  Savings: 14,
+  Investment: 8,
 };
+
+const DEFAULT_RENT_MONTHLY_CAP = new Decimal('1300');
+const PAY_PERIODS_PER_YEAR = new Decimal('26');
+const MONTHS_PER_YEAR = new Decimal('12');
 
 function toDecimal(value: Decimal | number | string | null | undefined) {
   return new Decimal(String(value ?? 0));
@@ -25,6 +31,7 @@ export interface RafCategoryInput {
   id: string;
   name: string;
   type: string;
+  expectedFrequency?: string | null;
   countsAsExpense: boolean;
   countsAsSavings: boolean;
   rafPercent?: Decimal | number | string | null;
@@ -182,14 +189,53 @@ export function calculateRafPlan(input: {
   );
   const useDefaultProfile = configuredTotal.equals(0);
 
+  const rentCategory = input.categories.find((category) => {
+    const byType = category.type.toUpperCase() === 'RENT';
+    const byName = category.name.trim().toLowerCase() === 'rent';
+    const monthly = (category.expectedFrequency ?? '').toUpperCase() === 'MONTHLY';
+    return byType || (byName && monthly);
+  });
+
+  const rentMonthlyCapRaw = process.env.RAF_RENT_MONTHLY_CAP?.trim();
+  const rentMonthlyCap = rentMonthlyCapRaw && /^\d+(\.\d{1,2})?$/.test(rentMonthlyCapRaw)
+    ? new Decimal(rentMonthlyCapRaw)
+    : DEFAULT_RENT_MONTHLY_CAP;
+  const fixedRentPerPeriod = rentMonthlyCap.times(MONTHS_PER_YEAR).dividedBy(PAY_PERIODS_PER_YEAR);
+  const fixedRentAllocation = rentCategory
+    ? Decimal.min(allocationBase, Decimal.max(fixedRentPerPeriod, new Decimal(0)))
+    : new Decimal(0);
+
+  const remainingBase = Decimal.max(allocationBase.minus(fixedRentAllocation), new Decimal(0));
+  const nonIncomeNonRentCategories = input.categories.filter(
+    (category) => category.type !== 'INCOME' && category.id !== rentCategory?.id
+  );
+  const nonRentWeightTotal = nonIncomeNonRentCategories.reduce((sum, category) => {
+    const configuredPercent = toDecimal(category.rafPercent);
+    const weight = useDefaultProfile
+      ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
+      : configuredPercent;
+    return sum.plus(weight);
+  }, new Decimal(0));
+
   const buckets = input.categories
     .filter((category) => category.type !== 'INCOME')
     .map((category) => {
-      const configuredPercent = toDecimal(category.rafPercent);
-      const percent = useDefaultProfile
+      const isRentBucket = rentCategory?.id === category.id;
+      const configuredWeight = toDecimal(category.rafPercent);
+      const weight = useDefaultProfile
         ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
-        : configuredPercent;
-      const allocated = allocationBase.times(percent).dividedBy(100);
+        : configuredWeight;
+
+      const allocated = isRentBucket
+        ? fixedRentAllocation
+        : nonRentWeightTotal.greaterThan(0)
+        ? remainingBase.times(weight).dividedBy(nonRentWeightTotal)
+        : new Decimal(0);
+
+      const percent = allocationBase.greaterThan(0)
+        ? allocated.dividedBy(allocationBase).times(100)
+        : new Decimal(0);
+
       const spent = input.entries
         .filter((entry) => entry.categoryId === category.id)
         .reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Decimal(0));
@@ -245,6 +291,12 @@ export function calculateRafPlan(input: {
     warnings.push('Using the default RAF allocation profile because no category percentages are configured yet.');
   }
 
+  if (rentCategory) {
+    warnings.push(
+      `Rent is funded as a fixed $${fixedRentAllocation.toFixed(2)} per biweekly period (monthly cap $${rentMonthlyCap.toFixed(2)}).`
+    );
+  }
+
   if (!carryForward.equals(0)) {
     warnings.push(
       `Carry forward ${carryForward.greaterThan(0) ? '+' : ''}$${carryForward.toFixed(2)} is distributed across RAF buckets by your percentage profile.`
@@ -271,7 +323,9 @@ export function calculateRafPlan(input: {
     totalIncome: income.toFixed(2),
     carryForward: carryForward.toFixed(2),
     allocationBase: allocationBase.toFixed(2),
-    totalPercent: configuredTotal.toFixed(2),
+    totalPercent: allocationBase.equals(0)
+      ? new Decimal(0).toFixed(2)
+      : buckets.reduce((sum, bucket) => sum.plus(new Decimal(bucket.percent.replace('%', ''))), new Decimal(0)).toFixed(2),
     allocated: totalAllocated.toFixed(2),
     unallocated: Decimal.max(unallocated, new Decimal(0)).toFixed(2),
     overallocated: Decimal.max(overallocated, new Decimal(0)).toFixed(2),

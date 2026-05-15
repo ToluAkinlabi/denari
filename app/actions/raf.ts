@@ -89,6 +89,7 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         id: c.id,
         name: c.name,
         type: c.type,
+        expectedFrequency: c.expectedFrequency,
         countsAsExpense: c.countsAsExpense ?? false,
         countsAsSavings: c.countsAsSavings ?? false,
         rafPercent: c.rafPercent,
@@ -112,8 +113,8 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
     const endStr = new Date(currentPeriod.endDate).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 
     const defaultRafByName: Record<string, number> = {
-      Rent: 28, Grocery: 5, Phone: 4, Debt: 10, Other: 3,
-      Spend: 15, Misc: 5, Partnership: 15, Savings: 10, Investment: 5,
+      Rent: 0, Grocery: 7, Phone: 5, Debt: 14, Other: 4,
+      Spend: 21, Misc: 7, Partnership: 20, Savings: 14, Investment: 8,
     };
     const rafTotal = categories.reduce((sum, c) => sum + Number(c.rafPercent ?? 0), 0);
     const hasConfiguredRaf = rafTotal > 0;
