@@ -11,6 +11,19 @@ interface RafPageContentProps {
   data: RafPageData;
 }
 
+function formatTransferTimestampUtc(isoString: string) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return 'Invalid date';
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
+}
+
 function getBucketFillWidthClass(fillPct: number, hasNoAllocation: boolean) {
   if (hasNoAllocation) {
     return 'w-full';
@@ -322,7 +335,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
                       {transfer.fromCategoryName} to {transfer.toCategoryName}
                     </p>
                     <p className="text-[11px] text-muted">
-                      {new Date(transfer.createdAt).toLocaleString()}
+                      {formatTransferTimestampUtc(transfer.createdAt)}
                     </p>
                   </div>
                   <button
