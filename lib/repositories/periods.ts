@@ -143,13 +143,14 @@ export async function getCurrentPeriodForUser(userId: string) {
  * Get period for a specific date
  */
 export async function getPeriodForDateAndUser(userId: string, date: Date) {
+  const targetDate = startOfDay(date);
   const { startDate, endDate } = getPeriodForDate(date);
 
   const matches = await prisma.period.findMany({
     where: {
       userId,
-      startDate: { lte: endDate },
-      endDate: { gte: startDate },
+      startDate: { lte: targetDate },
+      endDate: { gte: targetDate },
     },
     include: {
       ledgerEntries: {

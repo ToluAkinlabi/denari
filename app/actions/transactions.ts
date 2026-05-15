@@ -1163,7 +1163,11 @@ export async function getTransactions(
     normalizedWindowEntries.forEach((entry) => mergedById.set(entry.id, entry));
 
     let entries = Array.from(mergedById.values()).sort(
-      (a, b) => b.date.getTime() - a.date.getTime()
+      (a, b) => {
+        const byDate = b.date.getTime() - a.date.getTime();
+        if (byDate !== 0) return byDate;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      }
     );
 
     // Apply filters
