@@ -188,6 +188,7 @@ export function calculateRafPlan(input: {
     new Decimal(0)
   );
   const useDefaultProfile = configuredTotal.equals(0);
+  const useFixedRentAllocation = useDefaultProfile;
 
   const rentCategory = input.categories.find((category) => {
     const byType = category.type.toUpperCase() === 'RENT';
@@ -201,15 +202,17 @@ export function calculateRafPlan(input: {
     ? new Decimal(rentMonthlyCapRaw)
     : DEFAULT_RENT_MONTHLY_CAP;
   const fixedRentPerPeriod = rentMonthlyCap.times(MONTHS_PER_YEAR).dividedBy(PAY_PERIODS_PER_YEAR);
-  const fixedRentAllocation = rentCategory
+  const fixedRentAllocation = useFixedRentAllocation && rentCategory
     ? Decimal.min(allocationBase, Decimal.max(fixedRentPerPeriod, new Decimal(0)))
     : new Decimal(0);
 
   const remainingBase = Decimal.max(allocationBase.minus(fixedRentAllocation), new Decimal(0));
-  const nonIncomeNonRentCategories = input.categories.filter(
-    (category) => category.type !== 'INCOME' && category.id !== rentCategory?.id
+  const weightedCategories = input.categories.filter(
+    (category) =>
+      category.type !== 'INCOME' &&
+      (!useFixedRentAllocation || category.id !== rentCategory?.id)
   );
-  const nonRentWeightTotal = nonIncomeNonRentCategories.reduce((sum, category) => {
+  const weightedCategoryTotal = weightedCategories.reduce((sum, category) => {
     const configuredPercent = toDecimal(category.rafPercent);
     const weight = useDefaultProfile
       ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
@@ -225,11 +228,12 @@ export function calculateRafPlan(input: {
       const weight = useDefaultProfile
         ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
         : configuredWeight;
+      const weightedBase = useFixedRentAllocation ? remainingBase : Decimal.max(allocationBase, new Decimal(0));
 
-      const allocated = isRentBucket
+      const allocated = useFixedRentAllocation && isRentBucket
         ? fixedRentAllocation
-        : nonRentWeightTotal.greaterThan(0)
-        ? remainingBase.times(weight).dividedBy(nonRentWeightTotal)
+        : weightedCategoryTotal.greaterThan(0)
+        ? weightedBase.times(weight).dividedBy(weightedCategoryTotal)
         : new Decimal(0);
 
       const percent = allocationBase.greaterThan(0)
