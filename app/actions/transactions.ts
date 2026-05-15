@@ -28,6 +28,8 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
 import * as notesRepo from '@/lib/repositories/notes';
+import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import { getEffectiveRafWeight } from '@/lib/finance/raf';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -623,6 +625,126 @@ export async function addTransaction(
     };
   } catch (error) {
     console.error('addTransaction error:', error);
+    return {
+      success: false,
+      error: `Server error: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
+ * Add an income entry and automatically create RAF transfers that
+ * route the full income amount directly to one target bucket,
+ * bypassing the normal percentage-based distribution.
+ *
+ * Each non-target spending bucket's proportional share of the income
+ * is transferred to the target bucket so it receives 100% of the income.
+ */
+export async function addDirectedIncomeEntry(input: {
+  amount: string;
+  categoryId: string;
+  description: string;
+  date: string;
+  periodId: string;
+  directToBucketId: string;
+}): Promise<ApiResponse<{ id: string; description: string }>> {
+  try {
+    const userId = await resolveUserId();
+
+    const amountNum = parseFloat(input.amount);
+    if (!input.amount || isNaN(amountNum) || amountNum <= 0) {
+      return { success: false, error: 'Amount must be a positive number.' };
+    }
+    if (!input.categoryId) return { success: false, error: 'Income category is required.' };
+    if (!input.directToBucketId) return { success: false, error: 'Target bucket is required.' };
+    if (!input.description?.trim()) return { success: false, error: 'Description is required.' };
+    if (!input.date) return { success: false, error: 'Date is required.' };
+
+    const incomeCategory = await categoriesRepo.getCategoryById(input.categoryId);
+    if (!incomeCategory || incomeCategory.userId !== userId) {
+      return { success: false, error: 'Income category not found.' };
+    }
+    if (incomeCategory.type !== 'INCOME') {
+      return { success: false, error: 'Selected category must be an income category.' };
+    }
+
+    const targetCategory = await categoriesRepo.getCategoryById(input.directToBucketId);
+    if (!targetCategory || targetCategory.userId !== userId) {
+      return { success: false, error: 'Target bucket not found.' };
+    }
+    if (targetCategory.type === 'INCOME') {
+      return { success: false, error: 'Target bucket cannot be an income category.' };
+    }
+
+    const date = parseIsoDateString(input.date) || new Date();
+    const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
+    const periodId = resolvedPeriod.id;
+
+    // Step 1: Save the income entry
+    const metadata = await inferEntryForecastMetadata({
+      userId,
+      categoryId: input.categoryId,
+      entryType: 'INCOME',
+      date,
+      description: input.description,
+      categoryDefaultStrategy: incomeCategory.defaultStrategy,
+      categoryExpectedFrequency: incomeCategory.expectedFrequency,
+    });
+
+    const entry = await ledgerRepo.createLedgerEntry({
+      date,
+      amount: new Decimal(input.amount),
+      categoryId: input.categoryId,
+      description: input.description,
+      entryType: 'INCOME',
+      periodId,
+      userId,
+      tags: metadata.tags,
+      forecastStrategy: metadata.forecastStrategy,
+      nextOccurrence: metadata.nextOccurrence,
+      isProvisional: metadata.isProvisional,
+    });
+
+    // Step 2: Load all non-income categories and compute proportional RAF weights
+    const allCategories = await categoriesRepo.getCategoriesForUser(userId);
+    const spendingCategories = allCategories.filter((c) => c.type !== 'INCOME');
+
+    const totalWeight = spendingCategories.reduce(
+      (sum, c) => sum + getEffectiveRafWeight(c),
+      0
+    );
+
+    // Step 3: Create RAF transfers from each non-target bucket → target bucket
+    // for their proportional share of this income amount
+    if (totalWeight > 0) {
+      const incomeDecimal = new Decimal(input.amount);
+      for (const cat of spendingCategories) {
+        if (cat.id === input.directToBucketId) continue;
+        const weight = getEffectiveRafWeight(cat);
+        if (weight <= 0) continue;
+        const transferAmount = incomeDecimal.times(weight).dividedBy(totalWeight);
+        if (transferAmount.lessThan(0.01)) continue;
+        await rafTransfersRepo.createRafTransfer({
+          userId,
+          periodId,
+          fromCategoryId: cat.id,
+          toCategoryId: input.directToBucketId,
+          amount: transferAmount.toDecimalPlaces(2).toNumber(),
+          note: `Auto: directed income "${input.description}" to ${targetCategory.name}`,
+        });
+      }
+    }
+
+    revalidatePath('/');
+    revalidatePath('/raf');
+    revalidatePath('/transactions');
+    revalidateAiInsight(userId);
+    return {
+      success: true,
+      data: { id: entry.id, description: entry.description || '' },
+    };
+  } catch (error) {
+    console.error('addDirectedIncomeEntry error:', error);
     return {
       success: false,
       error: `Server error: ${(error as Error).message}`,
