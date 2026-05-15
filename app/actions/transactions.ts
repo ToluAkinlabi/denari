@@ -98,6 +98,16 @@ function revalidateAiInsight(userId: string) {
   revalidateTag(`daily-ai-insight:${userId}`);
 }
 
+function isDateWithinPeriodWindow(
+  date: Date,
+  period: { startDate: Date; endDate: Date }
+) {
+  const txDay = startOfDay(date);
+  const periodStart = startOfDay(period.startDate);
+  const periodEnd = endOfDay(period.endDate);
+  return txDay >= periodStart && txDay <= periodEnd;
+}
+
 async function resolveUserId(userId?: string) {
   if (userId) return userId;
   const user = await usersRepo.getOrCreateDefaultUser();
@@ -458,6 +468,7 @@ export async function addQuickEntry(
     }
 
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidatePath('/transactions');
     revalidateAiInsight(userId);
     return {
@@ -534,9 +545,16 @@ export async function addTransaction(
       ? await periodsRepo.getPeriodById(data.periodId)
       : null;
 
+    if (selectedPeriod && selectedPeriod.userId !== userId) {
+      return {
+        success: false,
+        error: 'Unauthorized period access',
+      };
+    }
+
     // If UI sends a period for "today"but user picks a historical date,
     // map to the correct period for that date.
-    if (!selectedPeriod || date < selectedPeriod.startDate || date > selectedPeriod.endDate) {
+    if (!selectedPeriod || !isDateWithinPeriodWindow(date, selectedPeriod)) {
       const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
       resolvedPeriodId = resolvedPeriod.id;
     }
@@ -592,6 +610,7 @@ export async function addTransaction(
     }
 
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidatePath('/transactions');
     revalidateAiInsight(userId);
     return {
@@ -727,6 +746,7 @@ export async function importBacklogEntries(
 
     // Revalidate to refresh the dashboard
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidateAiInsight(userId);
 
     return {
@@ -814,7 +834,14 @@ export async function addSummaryEntry(
       ? await periodsRepo.getPeriodById(data.periodId)
       : null;
 
-    if (!selectedPeriod || date < selectedPeriod.startDate || date > selectedPeriod.endDate) {
+    if (selectedPeriod && selectedPeriod.userId !== userId) {
+      return {
+        success: false,
+        error: 'Unauthorized period access',
+      };
+    }
+
+    if (!selectedPeriod || !isDateWithinPeriodWindow(date, selectedPeriod)) {
       const resolvedPeriod = await periodsRepo.ensurePeriodForDateAndUser(userId, date);
       resolvedPeriodId = resolvedPeriod.id;
     }
@@ -891,6 +918,7 @@ export async function addSummaryEntry(
     }
 
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidateAiInsight(userId);
     return {
       success: true,
@@ -941,6 +969,7 @@ export async function deleteTransaction(
     await ledgerRepo.deleteLedgerEntry(entryId);
 
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidatePath('/transactions');
     revalidateAiInsight(resolvedUserId);
     return {
@@ -1059,6 +1088,7 @@ export async function updateTransaction(
     }
 
     revalidatePath('/');
+    revalidatePath('/raf');
     revalidatePath('/transactions');
     revalidateAiInsight(resolvedUserId);
     return {
