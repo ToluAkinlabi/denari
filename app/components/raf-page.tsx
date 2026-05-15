@@ -181,13 +181,19 @@ export function RafPageContent({ data }: RafPageContentProps) {
             const fillPct = hasNoAllocation ? 100 : Math.min(100, Math.max(0, (spent / allocated) * 100));
             const fillClass = hasNoAllocation ? 'bg-slate-500/70' : bucketBarColor(bucket.status);
             const widthClass = getBucketFillWidthClass(fillPct, hasNoAllocation);
+            const isFixedCap = bucket.name === 'Rent';
+            const perPeriod = Math.round(allocated);
+            const pctDisplay = `${parseFloat(bucket.percent).toFixed(1)}%`;
+            const bucketSubtitle = hasNoAllocation
+              ? '—'
+              : `${isFixedCap ? `$${perPeriod}` : `~$${perPeriod}`} · ${pctDisplay} of period`;
 
             return (
               <Card key={bucket.categoryId} className="p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <p className="text-sm font-semibold">{bucket.name}</p>
-                    <p className="text-[11px] text-muted">{bucket.percent} of income</p>
+                    <p className="text-[11px] text-muted">{bucketSubtitle}</p>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-bold ${bucketStatusColor(bucket.status)}`}>
@@ -233,9 +239,10 @@ export function RafPageContent({ data }: RafPageContentProps) {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[11px] text-muted block mb-1">From</label>
+            <label htmlFor="raf-transfer-from" className="text-[11px] text-muted block mb-1">From</label>
             <select
-              aria-label="Select source bucket"
+              id="raf-transfer-from"
+              name="rafTransferFrom"
               className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
@@ -253,9 +260,10 @@ export function RafPageContent({ data }: RafPageContentProps) {
             </select>
           </div>
           <div>
-            <label className="text-[11px] text-muted block mb-1">To</label>
+            <label htmlFor="raf-transfer-to" className="text-[11px] text-muted block mb-1">To</label>
             <select
-              aria-label="Select destination bucket"
+              id="raf-transfer-to"
+              name="rafTransferTo"
               className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
               value={toId}
               onChange={(e) => setToId(e.target.value)}
@@ -269,10 +277,12 @@ export function RafPageContent({ data }: RafPageContentProps) {
         </div>
 
         <div>
-          <label className="text-[11px] text-muted block mb-1">
+          <label htmlFor="raf-transfer-amount" className="text-[11px] text-muted block mb-1">
             Amount ($) {fromSurplus > 0 && fromBucket ? `· max $${fromSurplus.toFixed(2)}` : ''}
           </label>
           <input
+            id="raf-transfer-amount"
+            name="rafTransferAmount"
             type="number"
             min="0"
             step="10"
