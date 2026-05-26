@@ -33,7 +33,8 @@ export async function getDemoModeEnabled(): Promise<ApiResponse<{ enabled: boole
 
 export async function setDemoModeEnabled(input: { enabled: boolean }): Promise<ApiResponse<{ enabled: boolean }>> {
   try {
-    cookies().set(DEMO_MODE_COOKIE, input.enabled ? '1' : '0', {
+    const cookieStore = await cookies();
+    cookieStore.set(DEMO_MODE_COOKIE, input.enabled ? '1' : '0', {
       path: '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
