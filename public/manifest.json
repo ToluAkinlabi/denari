@@ -18,7 +18,7 @@
   ],
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/denari-favicon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any"
@@ -32,7 +32,7 @@
       "url": "/add",
       "icons": [
         {
-          "src": "/icon.svg",
+          "src": "/denari-favicon.svg",
           "sizes": "any"
         }
       ]
@@ -43,7 +43,7 @@
       "url": "/periods",
       "icons": [
         {
-          "src": "/icon.svg",
+          "src": "/denari-favicon.svg",
           "sizes": "any"
         }
       ]

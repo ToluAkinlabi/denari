@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Denari favicon">
+  <defs>
+    <linearGradient id="denari-bg" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eff6ff"/>
+      <stop offset="0.55" stop-color="#bfdbfe"/>
+      <stop offset="1" stop-color="#93c5fd"/>
+    </linearGradient>
+    <linearGradient id="denari-blue" x1="78" y1="56" x2="196" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="0.45" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#denari-bg)"/>
+  <circle cx="182" cy="70" r="18" fill="#1d4ed8" opacity="0.12"/>
+  <circle cx="70" cy="188" r="14" fill="#1d4ed8" opacity="0.1"/>
+  <path d="M82 56h46c52 0 92 31 92 72s-40 72-92 72H82V56Z" fill="none" stroke="url(#denari-blue)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M104 86h26c25 0 46 19 46 42s-21 42-46 42h-26V86Z" fill="#ffffff" opacity="0.3"/>
+  <path d="M110 164h18V98h-18v66Zm30 0h18v-50h-18v50Zm30 0h18v-32h-18v32Z" fill="#1e3a8a"/>
+  <path d="M104 186h90" stroke="#1e3a8a" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+</svg>

@@ -10,9 +10,15 @@ export const metadata: Metadata = {
   description: 'Track cash, spending, savings, and wealth growth',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: [
+      { url: '/denari-favicon.svg?v=20260526', type: 'image/svg+xml', sizes: 'any' },
+    ],
+    shortcut: [
+      { url: '/denari-favicon.svg?v=20260526', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon.svg?v=20260526' },
+    ],
   },
   appleWebApp: {
     capable: true,
