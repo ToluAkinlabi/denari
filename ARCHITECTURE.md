@@ -1,8 +1,8 @@
-# Ledge Architecture Guide
+# Denari Architecture Guide
 
 ## System Design Overview
 
-Ledge is built on a **single canonical ledger** architecture where all financial truth derives from ledger entries. This ensures financial data integrity and prevents drift.
+Denari is built on a **single canonical ledger** architecture where all financial truth derives from ledger entries. This ensures financial data integrity and prevents drift.
 
 ## 1. Core Philosophy
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ledge-v1';
+const CACHE_NAME = 'denari-v2';
 const urlsToCache = [
   '/',
   '/offline.html',

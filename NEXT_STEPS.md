@@ -1,4 +1,4 @@
-# Ledge Implementation Guide - Next Steps
+# Denari Implementation Guide - Next Steps
 
 ## 🎯 What to Do Next
 

@@ -1,4 +1,4 @@
-# Ledge - Project Initialization Complete ✅
+# Denari - Project Initialization Complete ✅
 
 ## 📋 Complete Deliverable Summary
 
@@ -15,7 +15,7 @@ A fully-architected personal finance web application with:
 ## 📁 Project Structure Generated
 
 ```
-ledge/
+denari/
 ├── 📄 package.json                # Dependencies & scripts
 ├── 📄 tsconfig.json               # TypeScript configuration
 ├── 📄 next.config.js              # Next.js configuration
@@ -548,7 +548,7 @@ All foundation is in place. Your next steps:
 
 ## 🎉 Project Complete!
 
-**Ledge is ready for development.**
+**Denari is ready for development.**
 
 All architecture, patterns, and foundations are in place. The next phase is implementing the specific features and integrating the API/database layer.
 

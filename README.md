@@ -1,4 +1,4 @@
-# Ledge - Personal Financial Command Center
+# Denari - Personal Financial Command Center
 
 A mobile-first personal finance web application that replaces complex Excel financial trackers.
 
@@ -16,7 +16,7 @@ A mobile-first personal finance web application that replaces complex Excel fina
 
 ### Financial Distinction
 
-Ledge maintains strict separation of four financial concepts:
+Denari maintains strict separation of four financial concepts:
 
 - **Cash** - Money in checking/liquid accounts
 - **Spending** - Money consumed and gone
@@ -50,7 +50,7 @@ Ledge maintains strict separation of four financial concepts:
 
 1. **Clone the repository**
    ```bash
-   cd ledge
+   cd denari
    ```
 
 2. **Install dependencies**
@@ -86,7 +86,7 @@ Ledge maintains strict separation of four financial concepts:
 ### iOS
 1. Open app in Safari
 2. Tap Share → Add to Home Screen
-3. Enter "Ledge" as name
+3. Enter "Denari" as name
 4. Tap Add
 
 ### Android
@@ -236,7 +236,7 @@ npm start
 ## 📝 Project Structure
 
 ```
-ledge/
+denari/
 ├── app/                    # Next.js App Router
 │   ├── components/         # React components
 │   ├── add/               # Add transaction page

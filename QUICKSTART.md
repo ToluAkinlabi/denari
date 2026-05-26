@@ -1,10 +1,10 @@
-# Ledge - Quick Start Guide
+# Denari - Quick Start Guide
 
 ## 🚀 Getting Started in 5 Minutes
 
 ### Step 1: Clone the Repository
 ```bash
-cd ledge
+cd denari
 ```
 
 ### Step 2: Install Dependencies
@@ -62,7 +62,7 @@ Visit `http://localhost:3000` 🎉
 ## 🔧 Project Structure
 
 ```
-ledge/
+denari/
 ├── app/                    # Next.js pages and layouts
 │   ├── page.tsx           # Dashboard (/)
 │   ├── add/page.tsx       # Add transaction (/add)
@@ -172,7 +172,7 @@ Manual period override supported.
 This is crucial for trust:
 
 1. **Check Your Bank** - Get actual closing balance
-2. **Enter in Ledge** - Input actual cash
+2. **Enter in Denari** - Input actual cash
 3. **Compare** - Expected vs Actual
 4. **Adjust** - If mismatch, log missing transaction
 
