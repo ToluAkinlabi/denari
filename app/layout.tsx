@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Providers } from './providers';
 import { Navigation } from '@/components/navigation';
 import { DevSwGuard } from '@/components/dev-sw-guard';
@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   title: 'Denari - Personal Financial Command Center',
   description: 'Track cash, spending, savings, and wealth growth',
   manifest: '/manifest.json',
-  themeColor: '#0f172a',
   icons: {
     icon: '/icon.svg',
     apple: '/icon.svg',
@@ -22,6 +21,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({

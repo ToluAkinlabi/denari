@@ -164,8 +164,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </Card>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Amount</label>
+            <label htmlFor="add-entry-amount" className="text-sm font-medium block mb-2">Amount</label>
             <input
+              id="add-entry-amount"
               type="number"
               placeholder="0.00"
               className="input-field"
@@ -178,8 +179,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Category</label>
+            <label htmlFor="add-entry-category" className="text-sm font-medium block mb-2">Category</label>
             <select
+              id="add-entry-category"
               className="input-field"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -204,8 +206,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
               </label>
               {directToBucket && (
                 <div>
-                  <label className="text-xs text-muted block mb-1">Target bucket</label>
+                  <label htmlFor="add-entry-target-bucket" className="text-xs text-muted block mb-1">Target bucket</label>
                   <select
+                    id="add-entry-target-bucket"
                     className="input-field"
                     value={directToBucketId}
                     onChange={(e) => setDirectToBucketId(e.target.value)}
@@ -223,8 +226,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           )}
 
           <div>
-            <label className="text-sm font-medium block mb-2">Date</label>
+            <label htmlFor="add-entry-date" className="text-sm font-medium block mb-2">Date</label>
             <input
+              id="add-entry-date"
               type="date"
               className="input-field"
               value={date}
@@ -234,8 +238,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Description</label>
+            <label htmlFor="add-entry-description" className="text-sm font-medium block mb-2">Description</label>
             <input
+              id="add-entry-description"
               type="text"
               placeholder="What was this for?"
               className="input-field"
