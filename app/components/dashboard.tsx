@@ -111,7 +111,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Ledge</h1>
+        <h1 className="text-3xl font-bold">Denari</h1>
         <p className="text-muted">See where your money stands</p>
       </div>
 

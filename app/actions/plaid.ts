@@ -112,7 +112,7 @@ export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse
 
     const response = await client.linkTokenCreate({
       user: { client_user_id: resolvedUserId },
-      client_name: 'Ledge',
+      client_name: 'Denari',
       language: 'en',
       country_codes: [CountryCode.Us],
       products: [Products.Transactions],

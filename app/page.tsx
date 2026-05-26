@@ -4,7 +4,7 @@ import { getDashboardData } from '@/app/actions/dashboard';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Dashboard - Ledge',
+  title: 'Dashboard - Denari',
   description: 'Your financial overview at a glance',
 };
 

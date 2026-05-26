@@ -2,30 +2,27 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-// Define all default categories
+// Define all default categories for Denari
 const categories = [
   // Income
   { name: 'Income', type: 'INCOME', group: 'INCOME', color: '#10b981', icon: 'TrendingUp', countsAsExpense: false, countsAsSavings: false, rafPercent: 0 },
 
   // Essential
-  { name: 'Rent', type: 'RENT', group: 'ESSENTIAL', color: '#ef4444', icon: 'Home', countsAsExpense: true, countsAsSavings: false, rafPercent: 28 },
-  { name: 'Grocery', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', icon: 'ShoppingCart', countsAsExpense: true, countsAsSavings: false, rafPercent: 5 },
-  { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', icon: 'Smartphone', countsAsExpense: true, countsAsSavings: false, rafPercent: 4 },
-  { name: 'Other', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', icon: 'Zap', countsAsExpense: true, countsAsSavings: false, rafPercent: 3 },
-  { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', icon: 'CreditCard', countsAsExpense: true, countsAsSavings: false, rafPercent: 10 },
+  { name: 'Groceries', type: 'GROCERY', group: 'ESSENTIAL', color: '#f97316', icon: 'ShoppingCart', countsAsExpense: true, countsAsSavings: false, rafPercent: 10 },
+  { name: 'Phone', type: 'PHONE', group: 'ESSENTIAL', color: '#3b82f6', icon: 'Smartphone', countsAsExpense: true, countsAsSavings: false, rafPercent: 5 },
+  { name: 'Others', type: 'OTHER', group: 'ESSENTIAL', color: '#8b5cf6', icon: 'Zap', countsAsExpense: true, countsAsSavings: false, rafPercent: 5 },
+  { name: 'Debt', type: 'DEBT', group: 'ESSENTIAL', color: '#dc2626', icon: 'CreditCard', countsAsExpense: true, countsAsSavings: false, rafPercent: 15 },
 
   // Lifestyle
-  { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', icon: 'ShoppingBag', countsAsExpense: true, countsAsSavings: false, rafPercent: 15 },
-
-  // Avoidable
-  { name: 'Misc', type: 'MISC', group: 'AVOIDABLE', color: '#ec4899', icon: 'HelpCircle', countsAsExpense: true, countsAsSavings: false, rafPercent: 5 },
+  { name: 'Spend', type: 'SPEND', group: 'LIFESTYLE', color: '#06b6d4', icon: 'ShoppingBag', countsAsExpense: true, countsAsSavings: false, rafPercent: 20 },
 
   // Values
-  { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', icon: 'Heart', countsAsExpense: true, countsAsSavings: false, rafPercent: 15 },
+  { name: 'Partnership', type: 'PARTNERSHIP', group: 'VALUES', color: '#f59e0b', icon: 'Heart', countsAsExpense: true, countsAsSavings: false, rafPercent: 10 },
+  { name: 'Gifts', type: 'MISC', group: 'VALUES', color: '#ec4899', icon: 'Gift', countsAsExpense: true, countsAsSavings: false, rafPercent: 5 },
 
   // Wealth
-  { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', icon: 'PiggyBank', countsAsExpense: false, countsAsSavings: true, rafPercent: 10 },
-  { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', icon: 'LineChart', countsAsExpense: false, countsAsSavings: true, rafPercent: 5 },
+  { name: 'Savings', type: 'SAVINGS', group: 'WEALTH', color: '#14b8a6', icon: 'PiggyBank', countsAsExpense: false, countsAsSavings: true, rafPercent: 15 },
+  { name: 'Investment', type: 'SAVINGS', group: 'WEALTH', color: '#0ea5e9', icon: 'LineChart', countsAsExpense: false, countsAsSavings: true, rafPercent: 15 },
 ];
 
 async function main() {

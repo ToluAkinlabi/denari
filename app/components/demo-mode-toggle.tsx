@@ -43,7 +43,7 @@ export function DemoModeToggle({ initialEnabled }: DemoModeToggleProps) {
             <p className="font-medium">Demo Mode</p>
           </div>
           <p className="text-xs text-muted mt-1">
-            Show synthetic data throughout the app so you can demo Ledge without exposing your real finances.
+            Show synthetic data throughout the app so you can demo Denari without exposing your real finances.
           </p>
           {status && <p className="text-xs mt-2 text-emerald-300">{status}</p>}
         </div>

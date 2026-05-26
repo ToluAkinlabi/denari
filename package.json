@@ -1,7 +1,7 @@
 {
-  "name": "ledge",
+  "name": "denari",
   "version": "1.0.0",
-  "description": "Ledge - Personal Financial Command Center",
+  "description": "Denari - Personal Financial Command Center",
   "private": true,
   "scripts": {
     "dev": "next dev",
