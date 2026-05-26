@@ -8,7 +8,7 @@ interface PageHeroProps {
 
 export function PageHero({ title, description, eyebrow = 'Denari Workspace' }: PageHeroProps) {
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(219,234,254,0.92),rgba(254,240,138,0.35))] p-5 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.45)]">
+    <div className="rounded-[28px] border border-blue-200 bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(219,234,254,0.95),rgba(191,219,254,0.88))] p-5 shadow-[0_20px_40px_-28px_rgba(37,99,235,0.35)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700">{eyebrow}</p>

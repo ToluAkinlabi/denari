@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/icon.svg',
+    shortcut: '/icon.svg',
     apple: '/icon.svg',
   },
   appleWebApp: {
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({

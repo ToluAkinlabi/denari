@@ -25,9 +25,9 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-800/90 bg-slate-950/95 shadow-[0_-12px_40px_-24px_rgba(15,23,42,0.95)] backdrop-blur-sm">
+    <nav className="fixed bottom-0 left-0 right-0 border-t border-blue-200/90 bg-white/95 shadow-[0_-12px_40px_-24px_rgba(37,99,235,0.45)] backdrop-blur-sm">
       <div className="pointer-events-none absolute inset-x-0 -top-5 flex justify-center">
-        <div className="rounded-full border border-slate-700/80 bg-slate-950/95 px-2 py-1 shadow-lg">
+        <div className="rounded-full border border-blue-200/90 bg-white/95 px-2 py-1 shadow-lg">
           <DenariMark markClassName="h-8 w-8 rounded-xl" />
         </div>
       </div>
@@ -40,7 +40,7 @@ export function Navigation() {
             className={`flex items-center justify-center py-4 px-2 mx-1 my-2 rounded-xl transition-all duration-200 ${
               isActive(href)
                 ? 'nav-tab-active scale-105'
-                : 'text-gray-400 hover:text-gray-100'
+                : 'text-slate-500 hover:text-blue-700'
             }`}
             title={label}
           >

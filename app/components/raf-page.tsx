@@ -123,9 +123,9 @@ export function RafPageContent({ data }: RafPageContentProps) {
   };
 
   const bucketStatusColor = (status: string) => {
-    if (status === 'EXHAUSTED') return 'text-red-300';
-    if (status === 'AT_RISK') return 'text-amber-300';
-    return 'text-emerald-300';
+    if (status === 'EXHAUSTED') return 'text-red-700';
+    if (status === 'AT_RISK') return 'text-sky-700';
+    return 'text-blue-700';
   };
 
   const bucketBarColor = (status: string) => {
@@ -177,7 +177,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
         <p className="text-xs text-muted uppercase tracking-wide mb-1">RAF Allocation Base</p>
         {data.hasIncome ? (
           <>
-            <p className={`text-3xl font-bold ${Number(data.allocationBase) >= 0 ? 'text-emerald-400' : 'text-red-300'}`}>
+            <p className={`text-3xl font-bold ${Number(data.allocationBase) >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
               ${data.allocationBase}
             </p>
             <p className="text-xs text-muted mt-1">
@@ -188,8 +188,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
           </>
         ) : (
           <div>
-            <p className="text-2xl font-bold text-red-300">${data.allocationBase}</p>
-            <p className="text-xs text-amber-300 mt-1">
+            <p className="text-2xl font-bold text-red-700">${data.allocationBase}</p>
+            <p className="text-xs text-slate-700 mt-1">
               Allocation base is not positive. Add income or improve carry forward to restore spendable RAF buckets.
             </p>
           </div>
@@ -199,8 +199,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
       {/* All buckets */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-200">Buckets</h2>
-          <span className="text-[10px] text-muted px-2 py-0.5 rounded border border-gray-700">
+          <h2 className="text-sm font-semibold text-slate-900">Buckets</h2>
+          <span className="text-[10px] text-blue-700 px-2 py-0.5 rounded border border-blue-200 bg-blue-50">
             {data.raf.profileSource === 'DEFAULT' ? 'Default profile' : 'Configured'}
           </span>
         </div>
@@ -225,16 +225,16 @@ export function RafPageContent({ data }: RafPageContentProps) {
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <p className="text-sm font-semibold">{bucket.name}</p>
-                    <p className="text-[11px] text-muted">{bucketSubtitle}</p>
+                    <p className="text-xs font-medium text-slate-700">{bucketSubtitle}</p>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-bold ${bucketStatusColor(bucket.status)}`}>
                       {remaining >= 0 ? `$${remaining.toFixed(2)} left` : `-$${Math.abs(remaining).toFixed(2)} over`}
                     </p>
-                    <p className="text-[11px] text-muted">${spent.toFixed(2)} of ${allocated.toFixed(2)}</p>
+                    <p className="text-xs font-medium text-slate-700">${spent.toFixed(2)} of ${allocated.toFixed(2)}</p>
                   </div>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-1.5">
+                <div className="w-full bg-blue-100 rounded-full h-1.5">
                   <div
                     className={`h-1.5 rounded-full ${fillClass} ${widthClass}`}
                   />
@@ -247,17 +247,17 @@ export function RafPageContent({ data }: RafPageContentProps) {
 
       {/* Totals row */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="rounded-lg border border-gray-700 px-2 py-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-2 py-2">
           <p className="text-muted">Allocated</p>
-          <p className="font-semibold text-emerald-400">${data.raf.allocated}</p>
+          <p className="font-semibold text-blue-700">${data.raf.allocated}</p>
         </div>
-        <div className="rounded-lg border border-gray-700 px-2 py-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-2 py-2">
           <p className="text-muted">Unallocated</p>
-          <p className="font-semibold text-amber-300">${data.raf.unallocated}</p>
+          <p className="font-semibold text-blue-700">${data.raf.unallocated}</p>
         </div>
-        <div className="rounded-lg border border-gray-700 px-2 py-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-2 py-2">
           <p className="text-muted">Over</p>
-          <p className="font-semibold text-red-300">${data.raf.overallocated}</p>
+          <p className="font-semibold text-red-700">${data.raf.overallocated}</p>
         </div>
       </div>
 
@@ -275,7 +275,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
             <select
               id="raf-transfer-from"
               name="rafTransferFrom"
-              className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
+              className="w-full rounded-lg border border-blue-200 bg-white text-sm px-2 py-2 text-slate-900"
               value={fromId}
               onChange={(e) => setFromId(e.target.value)}
             >
@@ -296,7 +296,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
             <select
               id="raf-transfer-to"
               name="rafTransferTo"
-              className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-2 py-2 text-gray-100"
+              className="w-full rounded-lg border border-blue-200 bg-white text-sm px-2 py-2 text-slate-900"
               value={toId}
               onChange={(e) => setToId(e.target.value)}
             >
@@ -322,17 +322,17 @@ export function RafPageContent({ data }: RafPageContentProps) {
             value={transferAmt}
             onChange={(e) => setTransferAmt(e.target.value)}
             placeholder="e.g. 200"
-            className="w-full rounded-lg border border-gray-700 bg-[#2a2a2a] text-sm px-3 py-2 text-gray-100 placeholder-gray-500"
+            className="w-full rounded-lg border border-blue-200 bg-white text-sm px-3 py-2 text-slate-900 placeholder-slate-400"
           />
         </div>
 
         {fromBucket && toBucket && fromBucket.id !== toBucket.id && Number(transferAmt) > 0 && income > 0 && (
-          <div className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300">
+          <div className="rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2 text-xs text-slate-700">
             <ArrowRight size={12} className="inline mr-1 text-sky-400" />
-            Move <span className="font-semibold text-sky-300">${Number(transferAmt).toFixed(2)}</span> from{' '}
+            Move <span className="font-semibold text-blue-700">${Number(transferAmt).toFixed(2)}</span> from{' '}
             <span className="font-semibold">{fromBucket.name}</span> →{' '}
             <span className="font-semibold">{toBucket.name}</span>
-            <span className="text-gray-400"> (period-only reallocation)</span>
+            <span className="text-blue-700"> (period-only reallocation)</span>
           </div>
         )}
 
@@ -347,7 +347,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
         </button>
 
         {status && (
-          <p className={`text-xs ${status.startsWith('Moved') ? 'text-emerald-300' : 'text-amber-300'}`}>
+          <p className={`text-xs ${status.startsWith('Moved') ? 'text-blue-700' : 'text-red-700'}`}>
             {status}
           </p>
         )}
@@ -369,10 +369,10 @@ export function RafPageContent({ data }: RafPageContentProps) {
               .map((transfer) => (
                 <div
                   key={transfer.id}
-                  className="rounded-lg border border-gray-700 px-3 py-2 flex items-center justify-between gap-3"
+                  className="rounded-lg border border-blue-200 px-3 py-2 flex items-center justify-between gap-3"
                 >
                   <div>
-                    <p className="text-xs text-gray-100">
+                    <p className="text-xs text-slate-900">
                       <span className="font-semibold">${Number(transfer.amount).toFixed(2)}</span>{' '}
                       {transfer.fromCategoryName} to {transfer.toCategoryName}
                     </p>
@@ -384,7 +384,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
                     type="button"
                     onClick={() => handleUndoTransfer(transfer.id)}
                     disabled={isPending}
-                    className="inline-flex items-center gap-1 rounded-md border border-gray-600 px-2 py-1 text-[11px] text-gray-100 hover:bg-gray-800 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                   >
                     <RotateCcw size={12} />
                     Undo
@@ -397,13 +397,13 @@ export function RafPageContent({ data }: RafPageContentProps) {
 
       {/* Warnings */}
       {data.raf.warnings.filter((w) => !w.startsWith('Consider')).length > 0 && (
-        <Card className="p-3 border-yellow-700/40 bg-yellow-950/20">
-          <p className="text-xs font-semibold text-yellow-200 mb-1">Notes</p>
+        <Card className="p-3 border-blue-200 bg-blue-50">
+          <p className="text-xs font-semibold text-blue-700 mb-1">Notes</p>
           <ul className="space-y-1">
             {data.raf.warnings
               .filter((w) => !w.startsWith('Consider'))
               .map((w) => (
-                <li key={w} className="text-xs text-yellow-100">• {w}</li>
+                <li key={w} className="text-xs text-slate-700">• {w}</li>
               ))}
           </ul>
         </Card>
