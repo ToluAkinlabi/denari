@@ -122,19 +122,19 @@ export function DashboardContent({ data }: DashboardContentProps) {
       <Card className="p-3 bg-[#232323]">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-[10px] text-muted uppercase tracking-wide">Cash</p>
+            <p className="text-[10px] text-gray-300 uppercase tracking-wide">Cash</p>
             <p className="text-sm font-bold text-amber-400">${data.cashMetrics.ending}</p>
           </div>
           <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-[10px] text-muted uppercase tracking-wide">Pace</p>
+            <p className="text-[10px] text-gray-300 uppercase tracking-wide">Pace</p>
             <p className={`text-sm font-bold ${paceStatusColorClass}`}>{data.paceMetrics.status}</p>
           </div>
           <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-[10px] text-muted uppercase tracking-wide">Flags</p>
+            <p className="text-[10px] text-gray-300 uppercase tracking-wide">Flags</p>
               <a href="#daily-ai-briefing" className="text-sm font-bold text-amber-300 underline-offset-2 hover:underline">
               {data.forecast.warnings.length}
             </a>
-            <p className="text-[10px] text-muted">Tap to review</p>
+            <p className="text-[10px] text-gray-300">Tap to review</p>
           </div>
         </div>
       </Card>
@@ -238,7 +238,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
         <Card className={`p-4 mt-6 ${rafCardAccentClass} hover:opacity-90 transition-opacity cursor-pointer`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted uppercase tracking-wide mb-1">RAF Allocation</p>
+              <p className="text-xs text-gray-300 uppercase tracking-wide mb-1">RAF Allocation</p>
               <p className={`text-base font-semibold ${rafHeadlineClass}`}>
                 {data.raf.exhaustedBuckets.length > 0
                   ? `${data.raf.exhaustedBuckets.length} bucket${data.raf.exhaustedBuckets.length === 1 ? '' : 's'} exhausted`
@@ -246,12 +246,12 @@ export function DashboardContent({ data }: DashboardContentProps) {
                   ? `${data.raf.atRiskBuckets.length} bucket${data.raf.atRiskBuckets.length === 1 ? '' : 's'} at risk`
                   : 'All buckets healthy'}
               </p>
-              <p className="text-xs text-muted mt-0.5">
+              <p className="text-xs text-gray-300 mt-0.5">
                 ${data.raf.allocated} allocated · ${data.raf.unallocated} free
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-muted mb-1">View full plan →</p>
+              <p className="text-[10px] text-gray-300 mb-1">View full plan →</p>
               <div className="flex gap-1 justify-end">
                 {data.raf.buckets.slice(0, 4).map((b) => (
                   <span
@@ -364,35 +364,35 @@ export function DashboardContent({ data }: DashboardContentProps) {
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">RAF Profile</p>
+              <p className="text-gray-300">RAF Profile</p>
               <p className="font-semibold text-sky-300">{data.raf.profileSource}</p>
             </div>
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">Bucket Pressure</p>
+              <p className="text-gray-300">Bucket Pressure</p>
               <p className="font-semibold text-amber-300">{data.raf.exhaustedBuckets.length + data.raf.atRiskBuckets.length} at risk</p>
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-700 px-2 py-2">
-            <p className="text-muted text-xs">Reliability Note</p>
+            <p className="text-gray-300 text-xs">Reliability Note</p>
             <p className="text-xs text-gray-200">{data.aiInsight.reliabilityReason}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">Income</p>
+              <p className="text-gray-300">Income</p>
               <p className="font-semibold text-emerald-400">${data.cashMetrics.income}</p>
             </div>
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">Spending</p>
+              <p className="text-gray-300">Spending</p>
               <p className="font-semibold text-red-400">${data.cashMetrics.spending}</p>
             </div>
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">Savings</p>
+              <p className="text-gray-300">Savings</p>
               <p className="font-semibold text-amber-400">${data.cashMetrics.savings}</p>
             </div>
             <div className="rounded-lg border border-gray-700 px-2 py-2">
-              <p className="text-muted">Next Cash (Likely)</p>
+              <p className="text-gray-300">Next Cash (Likely)</p>
               <p className="font-semibold text-amber-300">${data.forecast.nextEndingCash}</p>
             </div>
           </div>
@@ -430,7 +430,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
             </div>
           )}
 
-          <p className="text-[10px] text-muted">Updated {new Date(data.aiInsight.generatedAt).toLocaleString()}</p>
+          <p className="text-[10px] text-gray-300">Updated {new Date(data.aiInsight.generatedAt).toLocaleString()}</p>
         </div>
       </Card>
     </div>

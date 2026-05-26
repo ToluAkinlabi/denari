@@ -103,11 +103,11 @@
   }
 
   .text-muted {
-    @apply text-gray-500;
+    @apply text-slate-700;
   }
 
   .text-subtle {
-    @apply text-gray-400;
+    @apply text-slate-600;
   }
 
   .divider {

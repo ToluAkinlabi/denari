@@ -31,7 +31,7 @@ export function DenariMark({
       {showLabel ? (
         <div>
           <p className={`text-lg font-semibold tracking-tight text-slate-950 ${labelClassName}`.trim()}>{label}</p>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Personal Financial Command Center</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-blue-700">Personal Financial Command Center</p>
         </div>
       ) : null}
     </div>
