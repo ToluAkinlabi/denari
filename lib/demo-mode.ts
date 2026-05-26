@@ -228,7 +228,8 @@ const demoTransactions = createDemoTransactions();
 const demoPeriods = createDemoPeriods();
 
 export async function isDemoModeEnabled() {
-  return cookies().get(DEMO_MODE_COOKIE)?.value === '1';
+  const cookieStore = await cookies();
+  return cookieStore.get(DEMO_MODE_COOKIE)?.value === '1';
 }
 
 export async function createDemoDashboardData(): Promise<DashboardData> {
