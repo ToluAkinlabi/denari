@@ -3,6 +3,8 @@ import { Bell, Moon, HelpCircle, LogOut } from 'lucide-react';
 import { SettingsDataActions } from '@/app/components/settings-data-actions';
 import { SettingsBankConnection } from '@/app/components/settings-bank-connection';
 import { DemoModeToggle } from '@/app/components/demo-mode-toggle';
+import { DenariMark } from '@/components/denari-mark';
+import { PageHero } from '@/app/components/page-hero';
 import { getDemoModeEnabled } from '@/app/actions/settings';
 
 export default async function SettingsPage() {
@@ -11,10 +13,21 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6">
       <div className="space-y-6 pb-10">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted">Preferences and data</p>
-        </div>
+        <PageHero title="Settings" description="Manage Denari's preferences, connected bank data, and daily operating defaults." />
+
+        <Card className="overflow-hidden border-slate-200 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(29,78,216,0.94),rgba(15,118,110,0.9))] p-5 text-white">
+          <div className="flex items-center justify-between gap-4">
+            <DenariMark
+              showLabel
+              markClassName="h-12 w-12 rounded-2xl bg-white/10 ring-1 ring-white/20"
+              labelClassName="text-white"
+            />
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.22em] text-amber-200">Denari Profile</p>
+              <p className="mt-1 text-sm text-blue-100">Brand, preferences, connected data, and finance workflow settings.</p>
+            </div>
+          </div>
+        </Card>
 
         <div>
           <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Demo Mode</h3>

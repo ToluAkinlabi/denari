@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   title: 'Denari - Personal Financial Command Center',
   description: 'Track cash, spending, savings, and wealth growth',
   manifest: '/manifest.json',
+  themeColor: '#0f172a',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -28,10 +33,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#0ea5e9" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="icon" href="/icon.svg" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body className="bg-app-atmosphere text-gray-900">
         <Providers>

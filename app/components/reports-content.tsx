@@ -19,6 +19,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { MonthlyReportData } from '@/app/actions/reports';
+import { PageHero } from './page-hero';
 
 interface ReportsContentProps {
   embedded?: boolean;
@@ -46,7 +47,7 @@ export function ReportsContent({ embedded = false }: ReportsContentProps) {
   if (loading) {
     return (
       <div className={containerClass}>
-        {!embedded && <h1 className="text-3xl font-bold">Reports</h1>}
+        {!embedded && <PageHero title="Reports" description="Read Denari's performance signals, category mix, and period-to-period momentum." />}
         <p className="text-muted mt-2">Loading...</p>
       </div>
     );
@@ -55,7 +56,7 @@ export function ReportsContent({ embedded = false }: ReportsContentProps) {
   if (!report.success || !report.data) {
     return (
       <div className={containerClass}>
-        {!embedded && <h1 className="text-3xl font-bold">Reports</h1>}
+        {!embedded && <PageHero title="Reports" description="Read Denari's performance signals, category mix, and period-to-period momentum." />}
         <p className="text-muted mt-2">{report.error ?? 'Could not load monthly report.'}</p>
       </div>
     );
@@ -97,10 +98,7 @@ export function ReportsContent({ embedded = false }: ReportsContentProps) {
   return (
     <div className={containerClass}>
       {!embedded && (
-        <div>
-          <h1 className="text-3xl font-bold">Reports</h1>
-          <p className="text-muted">Analyze your finances</p>
-        </div>
+        <PageHero title="Reports" description="Analyze trendlines, see where money is concentrated, and spot what is actually improving." />
       )}
 
       {embedded && (

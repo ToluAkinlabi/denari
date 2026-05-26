@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { DenariMark } from './denari-mark';
 import {
   Home,
   List,
@@ -24,7 +25,12 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#232323] border-t border-[#3a3a3a] shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-800/90 bg-slate-950/95 shadow-[0_-12px_40px_-24px_rgba(15,23,42,0.95)] backdrop-blur-sm">
+      <div className="pointer-events-none absolute inset-x-0 -top-5 flex justify-center">
+        <div className="rounded-full border border-slate-700/80 bg-slate-950/95 px-2 py-1 shadow-lg">
+          <DenariMark markClassName="h-8 w-8 rounded-xl" />
+        </div>
+      </div>
       <div className="grid grid-cols-5 max-w-screen-sm mx-auto">
         {navItems.map(({ href, icon: Icon, label }) => (
           <Link

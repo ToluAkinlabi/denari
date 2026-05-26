@@ -4,6 +4,7 @@ import { Card } from '@/components/card';
 import { getRecentPeriods, reconcilePeriod, unreconcilePeriod } from '@/app/actions/periods';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, MoreVertical, Undo2 } from 'lucide-react';
+import { PageHero } from '@/app/components/page-hero';
 
 type PeriodItem = {
   id: string;
@@ -141,7 +142,7 @@ export default function PeriodsPage() {
   if (loading) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Periods</h1>
+        <PageHero title="Periods" description="Track biweekly cycles, reconcile real balances, and anchor carry-forward cash with confidence." />
         <p className="text-muted mt-2">Loading...</p>
       </div>
     );
@@ -150,7 +151,7 @@ export default function PeriodsPage() {
   if (error) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Periods</h1>
+        <PageHero title="Periods" description="Track biweekly cycles, reconcile real balances, and anchor carry-forward cash with confidence." />
         <p className="text-muted mt-2">{error}</p>
       </div>
     );
@@ -159,7 +160,7 @@ export default function PeriodsPage() {
   if (!data) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Periods</h1>
+        <PageHero title="Periods" description="Track biweekly cycles, reconcile real balances, and anchor carry-forward cash with confidence." />
         <p className="text-muted mt-2">No periods found.</p>
       </div>
     );
@@ -172,10 +173,7 @@ export default function PeriodsPage() {
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Periods</h1>
-          <p className="text-muted">Biweekly pay period tracking</p>
-        </div>
+        <PageHero title="Periods" description="Review pay cycles, reconcile each close, and keep Denari's cash timeline grounded in reality." />
 
         <div className="space-y-3">
           {data.items.map((period) => {

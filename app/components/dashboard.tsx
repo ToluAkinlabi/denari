@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { TrendingUp, CheckCircle, ArrowDownCircle, ArrowUpCircle, Calendar } from 'lucide-react';
 import { Card } from './card';
 import { StatCard } from './stat-card';
+import { DenariMark } from './denari-mark';
 import type { DashboardData } from '@/app/actions/dashboard';
 import { getHealthIndicator } from '@/lib/utils';
 
@@ -111,19 +112,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.9)] ring-1 ring-blue-200/40">
-          <svg viewBox="0 0 64 64" className="h-8 w-8" aria-hidden="true">
-            <defs>
-              <linearGradient id="dashboard-denari-gold" x1="16" y1="10" x2="48" y2="50" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#fef3c7" />
-                <stop offset="0.45" stopColor="#fbbf24" />
-                <stop offset="1" stopColor="#d97706" />
-              </linearGradient>
-            </defs>
-            <path d="M18 12h11c13 0 23 9 23 20S42 52 29 52H18V12Z" fill="none" stroke="url(#dashboard-denari-gold)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M24 43h5V21h-5v22Zm9 0h5V26h-5v17Zm9 0h5V31h-5v12Z" fill="#f8fafc" />
-          </svg>
-        </div>
+        <DenariMark markClassName="h-12 w-12" />
         <div>
           <h1 className="text-3xl font-bold">Denari</h1>
           <p className="text-muted">See where your money stands</p>

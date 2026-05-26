@@ -60,13 +60,15 @@ Denari maintains strict separation of four financial concepts:
 
 3. **Configure environment**
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
    
-   Edit `.env.local` and add your Neon database URL:
+   Edit `.env` and add your Neon database URL. Prisma reads `.env` by default, and Next.js will also load it for server-side code.
    ```
    DATABASE_URL="postgresql://user:password@ep-xxxxx.us-east-1.neon.tech/neondb?sslmode=require"
    ```
+
+   If you need browser-safe overrides for local UI flags, add an optional `.env.local` for `NEXT_PUBLIC_*` values.
 
 4. **Initialize database**
    ```bash

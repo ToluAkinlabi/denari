@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getMonthlyReport } from '@/app/actions/reports';
 import { ScenarioPlanner } from '@/app/components/scenario-planner';
 import { Card } from '@/components/card';
+import { PageHero } from '@/app/components/page-hero';
 
 export default function ScenariosPage() {
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,7 @@ export default function ScenariosPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Scenarios</h1>
+        <PageHero title="Scenarios" description="Pressure-test future decisions before they touch your real cash plan." />
         <p className="text-muted mt-2">Loading scenario baseline...</p>
       </div>
     );
@@ -45,7 +46,7 @@ export default function ScenariosPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Scenarios</h1>
+        <PageHero title="Scenarios" description="Pressure-test future decisions before they touch your real cash plan." />
         <p className="text-muted mt-2">{error}</p>
       </div>
     );
@@ -53,10 +54,7 @@ export default function ScenariosPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-20 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Scenarios</h1>
-        <p className="text-muted">Model what-if outcomes before you commit spending decisions</p>
-      </div>
+      <PageHero title="Scenarios" description="Model what-if outcomes before you commit spending decisions or rework your RAF plan." />
 
       <Card className="p-4">
         <h3 className="font-semibold mb-2">Baseline</h3>

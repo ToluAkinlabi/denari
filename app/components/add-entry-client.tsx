@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState, useTransition } from 'rea
 import { Card } from '@/components/card';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { addTransaction, addDirectedIncomeEntry } from '@/app/actions/transactions';
+import { PageHero } from './page-hero';
 
 interface AddEntryClientProps {
   periodId: string;
@@ -124,10 +125,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
       )}
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Add Entry</h1>
-          <p className="text-muted">Log income, spending, or savings transfers</p>
-        </div>
+        <PageHero title="Add Entry" description="Capture income, spending, or savings transfers quickly without losing period context." />
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Card className="p-4">
