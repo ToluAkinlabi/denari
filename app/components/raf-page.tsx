@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, RefreshCw, RotateCcw } from 'lucide-react';
 import { Card } from './card';
+import { ReportsContent } from './reports-content';
 import type { RafPageData } from '@/app/actions/raf';
 import { applyRafTransferSuggestion, undoRafTransfer } from '@/app/actions/settings';
 
@@ -46,6 +47,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState('');
+  const [activeTab, setActiveTab] = useState<'raf' | 'reports'>('raf');
 
   // Transfer form state
   const [fromId, setFromId] = useState('');
@@ -139,6 +141,36 @@ export function RafPageContent({ data }: RafPageContentProps) {
         <h1 className="text-2xl font-bold">Resource Allocation</h1>
         <p className="text-sm text-muted mt-0.5">Period #{data.periodIndex} · {data.periodRange}</p>
       </div>
+
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('raf')}
+          className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+            activeTab === 'raf'
+              ? 'bg-sky-600 text-white border-sky-500'
+              : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          RAF Buckets
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('reports')}
+          className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+            activeTab === 'reports'
+              ? 'bg-sky-600 text-white border-sky-500'
+              : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          Reports
+        </button>
+      </div>
+
+      {activeTab === 'reports' && <ReportsContent embedded />}
+
+      {activeTab === 'raf' && (
+        <>
 
       {/* Allocation anchor */}
       <Card className="p-4">
@@ -375,6 +407,8 @@ export function RafPageContent({ data }: RafPageContentProps) {
               ))}
           </ul>
         </Card>
+      )}
+        </>
       )}
     </div>
   );
