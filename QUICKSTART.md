@@ -143,9 +143,11 @@ Description: Farmer's market
 ### Biweekly Periods
 
 Transactions automatically assign to the correct period:
-- Jan 9-22 (Period 1)
-- Jan 23 - Feb 5 (Period 2)
-- Feb 6-19 (Period 3)
+- Jan 16-29 (Period 1)
+- Jan 30 - Feb 12 (Period 2)
+- Feb 13-26 (Period 3)
+- May 8-21 (Period 9)
+- May 22 - Jun 4 (Period 10)
 - etc.
 
 Manual period override supported.
@@ -208,7 +210,7 @@ DATABASE_URL="postgresql://..."
 
 # Optional
 NEXT_PUBLIC_ENABLE_PWA="true"
-NEXT_PUBLIC_FIRST_PAYDAY="2026-01-09"
+NEXT_PUBLIC_FIRST_PAYDAY="2026-01-16"
 NEXT_PUBLIC_PAY_CYCLE_DAYS="14"
 ```
 

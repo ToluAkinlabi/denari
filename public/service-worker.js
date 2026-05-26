@@ -1,8 +1,8 @@
-const CACHE_NAME = 'denari-v2';
+const CACHE_NAME = 'denari-v3';
 const urlsToCache = [
-  '/',
   '/offline.html',
-  '/icon-192x192.png',
+  '/icon.svg',
+  '/manifest.json',
 ];
 
 // Install event
@@ -39,6 +39,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
+  const isDocumentRequest = event.request.mode === 'navigate' || event.request.destination === 'document';
+
+  // Always use network for app/document requests so deployments reflect immediately.
+  if (isDocumentRequest) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
 
   // Never cache framework/runtime assets to avoid stale chunk/module mismatches.
   if (
@@ -67,6 +76,12 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Don't cache non-200 responses
         if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+
+        // Do not cache HTML responses to avoid stale deployments.
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
           return response;
         }
 

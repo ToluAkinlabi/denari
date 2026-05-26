@@ -108,7 +108,7 @@ Single user for personal use
 
 ### Periods
 Biweekly pay periods (14-day cycles)
-- First payday: January 9, 2026
+- First payday: January 16, 2026
 - Auto-calculated period tracking
 
 ### LedgerEntries
@@ -151,7 +151,7 @@ Financial Score = Multi-factor evaluation (0-100)
 
 Pay periods are automatically calculated:
 
-- **First payday**: January 9, 2026
+- **First payday**: January 16, 2026
 - **Cycle length**: 14 days
 - **Period formula**: 
   ```
@@ -159,6 +159,11 @@ Pay periods are automatically calculated:
   period_start = first_payday + (period_index * 14)
   period_end = period_start + 13 days
   ```
+
+Current sequence example:
+- Period 9: May 8 - May 21
+- Period 10: May 22 - Jun 4
+- Period 11: Jun 5 - Jun 18
 
 Transactions automatically map to the correct period.
 

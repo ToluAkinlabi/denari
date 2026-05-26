@@ -8,19 +8,35 @@ import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns';
 /**
  * First payday: January 9, 2026
  * Biweekly cycle: 14 days
- * First payday is the START of period 0 (Period 0: Jan 9, 2026 - Jan 22, 2026)
+ * First payday is the START of period 0 (Period 0: Jan 16, 2026 - Jan 29, 2026)
  * Each period is 14 days with inclusive boundaries on both start and end dates
  */
-const FIRST_PAYDAY = new Date(2026, 0, 9); // Local date: Jan 9, 2026
+const FIRST_PAYDAY = new Date(2026, 0, 16); // Local date: Jan 16, 2026
 const CYCLE_LENGTH_DAYS = 14;
+
+function normalizeCycleDate(date: Date): Date {
+  // Prisma/Postgres date-like fields are commonly represented at UTC midnight.
+  // Convert those to local calendar date to avoid timezone-driven off-by-one period indexes.
+  const isUtcMidnight =
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0;
+
+  if (isUtcMidnight) {
+    return startOfDay(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  }
+
+  return startOfDay(date);
+}
 
 /**
  * Get the pay cycle index for a given date
  * Payday is the START of a period.
  */
 export function getPayCycleIndex(date: Date): number {
-  const normalizedDate = startOfDay(date);
-  const normalizedFirstPayday = startOfDay(FIRST_PAYDAY);
+  const normalizedDate = normalizeCycleDate(date);
+  const normalizedFirstPayday = normalizeCycleDate(FIRST_PAYDAY);
   const daysSinceFirstPayday = differenceInCalendarDays(normalizedDate, normalizedFirstPayday);
 
   return Math.floor(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
@@ -31,7 +47,7 @@ export function getPayCycleIndex(date: Date): number {
  * Period 0 starts on FIRST_PAYDAY.
  */
 export function getPeriodStartDate(cycleIndex: number): Date {
-  return startOfDay(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
+  return normalizeCycleDate(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
 }
 
 /**
