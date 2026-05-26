@@ -2,14 +2,23 @@ import { Card } from '@/components/card';
 import { Bell, Moon, HelpCircle, LogOut } from 'lucide-react';
 import { SettingsDataActions } from '@/app/components/settings-data-actions';
 import { SettingsBankConnection } from '@/app/components/settings-bank-connection';
+import { DemoModeToggle } from '@/app/components/demo-mode-toggle';
+import { getDemoModeEnabled } from '@/app/actions/settings';
 
 export default async function SettingsPage() {
+  const demoMode = await getDemoModeEnabled();
+
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6">
       <div className="space-y-6 pb-10">
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
           <p className="text-muted">Preferences and data</p>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Demo Mode</h3>
+          <DemoModeToggle initialEnabled={demoMode.success ? demoMode.data?.enabled ?? false : false} />
         </div>
 
         {/* Appearance */}
@@ -43,7 +52,7 @@ export default async function SettingsPage() {
         </div>
 
         {/* Bank Connection */}
-        <SettingsBankConnection />
+        <SettingsBankConnection demoMode={demoMode.success ? demoMode.data?.enabled ?? false : false} />
 
         <SettingsDataActions />
 

@@ -1,5 +1,6 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { startOfDay } from 'date-fns';
 import * as usersRepo from '@/lib/repositories/users';
@@ -10,12 +11,46 @@ import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import { calculateIncome } from '@/lib/finance/wealth';
 import { applyRafPeriodTransfers, calculateRafPlan } from '@/lib/finance/raf';
+import {
+  DEMO_MODE_COOKIE,
+  createDemoCategoryForecastSettings,
+  isDemoModeEnabled,
+} from '@/lib/demo-mode';
 import type { ForecastStrategy } from '@prisma/client';
 
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export async function getDemoModeEnabled(): Promise<ApiResponse<{ enabled: boolean }>> {
+  return {
+    success: true,
+    data: { enabled: await isDemoModeEnabled() },
+  };
+}
+
+export async function setDemoModeEnabled(input: { enabled: boolean }): Promise<ApiResponse<{ enabled: boolean }>> {
+  try {
+    cookies().set(DEMO_MODE_COOKIE, input.enabled ? '1' : '0', {
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: input.enabled ? 60 * 60 * 24 * 365 : 0,
+    });
+
+    revalidatePath('/');
+    revalidatePath('/raf');
+    revalidatePath('/reports');
+    revalidatePath('/periods');
+    revalidatePath('/transactions');
+    revalidatePath('/settings');
+
+    return { success: true, data: { enabled: input.enabled } };
+  } catch (error) {
+    return { success: false, error: `Server error: ${(error as Error).message}` };
+  }
 }
 
 type CategoryForecastSetting = {
@@ -34,6 +69,13 @@ export async function getCategoryForecastSettings(
   userId?: string
 ): Promise<ApiResponse<CategoryForecastSetting[]>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: createDemoCategoryForecastSettings() as CategoryForecastSetting[],
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const categories = await categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId);
     const initialRafTotal = categories.reduce(
@@ -80,6 +122,10 @@ export async function updateCategoryForecastSetting(input: {
   userId?: string;
 }): Promise<ApiResponse<{ updated: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { updated: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
 
     const result = await categoriesRepo.updateCategoryForecastSettings(
@@ -115,6 +161,17 @@ export async function applyRafTransferSuggestion(input: {
   userId?: string;
 }): Promise<ApiResponse<{ movedAmount: number; fromBucketName: string; toBucketName: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: {
+          movedAmount: Number(input.transferAmount.toFixed(2)),
+          fromBucketName: input.fromBucketName,
+          toBucketName: input.toBucketName,
+        },
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
     if (!currentPeriod) {
@@ -243,6 +300,10 @@ export async function undoRafTransfer(input: {
   userId?: string;
 }): Promise<ApiResponse<{ undone: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { undone: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
 

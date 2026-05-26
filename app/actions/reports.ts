@@ -18,6 +18,7 @@ import type { LedgerEntry, Category, SavingsAllocation, Note } from '@prisma/cli
 import { calculateTotalSpending } from '@/lib/finance/spending';
 import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
 import { aggregateMonthly } from '@/lib/finance/monthly';
+import { createDemoMonthlyReportData, isDemoModeEnabled } from '@/lib/demo-mode';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -51,6 +52,10 @@ export async function getMonthlyReport(
   userId?: string
 ): Promise<ApiResponse<MonthlyReportData>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: createDemoMonthlyReportData() };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);

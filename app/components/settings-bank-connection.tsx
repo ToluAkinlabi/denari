@@ -16,6 +16,10 @@ interface ConnectionStatus {
   institutionName?: string;
 }
 
+interface SettingsBankConnectionProps {
+  demoMode?: boolean;
+}
+
 function getPlaidErrorHelp(message: string) {
   const normalized = message.toLowerCase();
 
@@ -38,7 +42,7 @@ function getPlaidErrorHelp(message: string) {
   return '';
 }
 
-export function SettingsBankConnection() {
+export function SettingsBankConnection({ demoMode = false }: SettingsBankConnectionProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [linkToken, setLinkToken] = useState<string | null>(null);
@@ -142,14 +146,26 @@ export function SettingsBankConnection() {
   }, [ready, linkToken, open]);
 
   const handleConnectBank = async () => {
+    if (demoMode) {
+      setError('Demo mode is on. Live bank connection is disabled.');
+      return;
+    }
     await createToken();
   };
 
   const handleReconnect = async () => {
+    if (demoMode) {
+      setError('Demo mode is on. Live bank connection is disabled.');
+      return;
+    }
     await createToken();
   };
 
   const handleSync = async () => {
+    if (demoMode) {
+      setSyncStatus('Demo mode uses synthetic bank activity.');
+      return;
+    }
     setSyncing(true);
     setSyncStatus('Syncing...');
     try {
@@ -192,6 +208,11 @@ export function SettingsBankConnection() {
     <div>
       <h3 className="text-sm font-semibold mb-2 text-muted uppercase">Bank Connection</h3>
       <Card className="p-4">
+        {demoMode && (
+          <div className="mb-3 rounded-md border border-emerald-700/50 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-100">
+            Demo mode is active. Bank connection and sync actions are disabled so your real account never appears.
+          </div>
+        )}
         {/* Status Section */}
         <div className="py-3 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3">
@@ -244,7 +265,7 @@ export function SettingsBankConnection() {
           {!status?.connected ? (
             <button
               onClick={handleConnectBank}
-              disabled={loading}
+              disabled={loading || demoMode}
               className="flex-1 py-2 px-3 bg-blue-600 dark:bg-blue-700 text-white rounded font-medium text-sm hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -263,7 +284,7 @@ export function SettingsBankConnection() {
             <>
               <button
                 onClick={handleSync}
-                disabled={syncing}
+                disabled={syncing || demoMode}
                 className="flex-1 py-2 px-3 bg-green-600 dark:bg-green-700 text-white rounded font-medium text-sm hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {syncing ? (
@@ -280,12 +301,14 @@ export function SettingsBankConnection() {
               </button>
               <button
                 onClick={handleReconnect}
+                disabled={demoMode}
                 className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded font-medium text-sm hover:bg-gray-300 dark:hover:bg-gray-600"
               >
                 Change
               </button>
               <button
                 onClick={handleDisconnect}
+                disabled={demoMode}
                 className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 rounded font-medium text-sm hover:bg-gray-300 dark:hover:bg-gray-600"
                 title="Disconnect bank account"
               >

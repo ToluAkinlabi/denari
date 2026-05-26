@@ -8,6 +8,11 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import { createPlaidClient } from '@/lib/plaid/client';
+import {
+  createDemoBankReviewQueue,
+  createDemoPlaidConnectionStatus,
+  isDemoModeEnabled,
+} from '@/lib/demo-mode';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -69,6 +74,10 @@ async function ensureUnassignedCategory(userId: string) {
 
 export async function getPlaidConnectionStatus(userId?: string): Promise<ApiResponse<{ connected: boolean; institutionName?: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: createDemoPlaidConnectionStatus() };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const connection = await plaidRepo.getPlaidConnectionForUser(resolvedUserId);
 
@@ -89,6 +98,13 @@ export async function getPlaidConnectionStatus(userId?: string): Promise<ApiResp
 
 export async function createPlaidLinkToken(userId?: string): Promise<ApiResponse<{ linkToken: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: false,
+        error: 'Demo mode is on. Live bank connection is disabled.',
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const client = createPlaidClient();
     const redirectUri = process.env.PLAID_REDIRECT_URI?.trim();
@@ -124,6 +140,13 @@ export async function exchangePlaidPublicToken(input: {
   userId?: string;
 }): Promise<ApiResponse<{ connected: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: { connected: false },
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
     const client = createPlaidClient();
 
@@ -154,6 +177,10 @@ export async function exchangePlaidPublicToken(input: {
 
 export async function syncPlaidTransactions(userId?: string): Promise<ApiResponse<{ added: number; modified: number; removed: number }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { added: 0, modified: 0, removed: 0 } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const connection = await plaidRepo.getPlaidConnectionForUser(resolvedUserId);
 
@@ -254,6 +281,10 @@ export async function syncPlaidTransactions(userId?: string): Promise<ApiRespons
 
 export async function getBankReviewQueue(userId?: string): Promise<ApiResponse<{ transactions: Array<{ id: string; date: string; amount: string; name: string; merchantName?: string; pending: boolean; reviewStatus: string; categoryId?: string; categoryName?: string; includeInRaf: boolean; duplicateCategoryCounts: Array<{ categoryId: string; categoryName: string; count: number }> }>; categories: Array<{ id: string; name: string }> }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: createDemoBankReviewQueue() };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const [transactions, categories] = await Promise.all([
       plaidRepo.getImportedTransactionsForReview(resolvedUserId),
@@ -332,6 +363,10 @@ export async function categorizeImportedTransaction(input: {
   userId?: string;
 }): Promise<ApiResponse<{ updated: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { updated: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
 
     const result = await plaidRepo.updateImportedTransactionReview({
@@ -365,6 +400,10 @@ export async function skipImportedTransaction(input: {
   userId?: string;
 }): Promise<ApiResponse<{ updated: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { updated: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
 
     const result = await plaidRepo.updateImportedTransactionReview({
@@ -398,6 +437,10 @@ export async function restoreImportedTransaction(input: {
   userId?: string;
 }): Promise<ApiResponse<{ updated: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { updated: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(input.userId);
     const unassigned = await ensureUnassignedCategory(resolvedUserId);
 
@@ -429,6 +472,10 @@ export async function restoreImportedTransaction(input: {
 
 export async function getImportedSpendingForCurrentPeriod(userId?: string): Promise<ApiResponse<{ amount: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { amount: '204.18' } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
 

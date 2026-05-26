@@ -30,6 +30,7 @@ import {
 import { calculateTotalSpending } from '@/lib/finance/spending';
 import { calculateIncome, calculateSavingsTransfers } from '@/lib/finance/wealth';
 import { getPayCycleIndex } from '@/lib/periods';
+import { createDemoPeriodsPageData, isDemoModeEnabled } from '@/lib/demo-mode';
 
 /**
  * Cascade-recalculate openingCash and closingCashExpected for ALL periods for a user.
@@ -128,6 +129,20 @@ export async function reconcilePeriod(
   }>
 > {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: {
+          reconciled: true,
+          difference: '0.00',
+          expectedCash: '1825.00',
+          actualCash: '1825.00',
+          quality: 'Perfect demo reconciliation',
+          hints: ['Demo mode is active, so no real data was changed.'],
+        },
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
 
     const [valid, validationError] = validate(reconciliationSchema, input);
@@ -224,6 +239,10 @@ export async function unreconcilePeriod(
   userId?: string
 ): Promise<ApiResponse<{ reopened: boolean }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { reopened: true } };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
 
     if (
@@ -283,6 +302,16 @@ export async function updatePeriodOpeningCash(
   userId?: string
 ): Promise<ApiResponse<{ success: boolean; message: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: {
+          success: true,
+          message: 'Demo mode is active; opening cash was not changed in the database.',
+        },
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
 
     // Validate
@@ -354,6 +383,27 @@ export async function getPeriodDetail(
   }>
 > {
   try {
+    if (await isDemoModeEnabled()) {
+      const firstPeriod = createDemoPeriodsPageData(1, 1).items[0];
+      return {
+        success: true,
+        data: {
+          id: periodId,
+          startDate: firstPeriod.startDate,
+          endDate: firstPeriod.endDate,
+          index: firstPeriod.index,
+          openingCash: firstPeriod.openingCash,
+          income: firstPeriod.income,
+          spending: firstPeriod.spending,
+          savings: firstPeriod.savings,
+          endingCash: firstPeriod.closingCashExpected,
+          wealth: firstPeriod.wealth,
+          isReconciled: firstPeriod.isReconciled,
+          notes: 'Demo mode is active.',
+        },
+      };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const period = await periodsRepo.getPeriodById(periodId);
     if (!period) {
@@ -448,6 +498,12 @@ export async function getRecentPeriods(
   }>
 > {
   try {
+    if (await isDemoModeEnabled()) {
+      const page = options?.page ?? 1;
+      const pageSize = options?.pageSize ?? 10;
+      return { success: true, data: createDemoPeriodsPageData(page, pageSize) };
+    }
+
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const page = options?.page ?? 1;
     const pageSize = options?.pageSize ?? 10;

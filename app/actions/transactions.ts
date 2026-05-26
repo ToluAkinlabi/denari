@@ -30,6 +30,11 @@ import * as usersRepo from '@/lib/repositories/users';
 import * as notesRepo from '@/lib/repositories/notes';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
 import { getEffectiveRafWeight } from '@/lib/finance/raf';
+import {
+  createDemoTransactionPageData,
+  createDemoTransactionRangeData,
+  isDemoModeEnabled,
+} from '@/lib/demo-mode';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -328,6 +333,13 @@ export async function getAddEntryOptions(
  */
 export async function getCurrentPeriodId(): Promise<ApiResponse<{ periodId: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return {
+        success: true,
+        data: { periodId: 'demo-period-current' },
+      };
+    }
+
     const resolvedUserId = await resolveUserId();
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);
 
@@ -1071,6 +1083,10 @@ export async function deleteTransaction(
   userId?: string
 ): Promise<ApiResponse<null>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true };
+    }
+
     const resolvedUserId = await resolveUserId(userId);
     // Verify entry exists and belongs to user
     const entry = await ledgerRepo.getLedgerEntryById(entryId);
@@ -1125,6 +1141,10 @@ export async function updateTransaction(
   userId?: string
 ): Promise<ApiResponse<{ id: string }>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: { id: entryId } };
+    }
+
     const resolvedUserId = await resolveUserId(userId);
     // Verify ownership
     const entry = await ledgerRepo.getLedgerEntryById(entryId);
@@ -1258,6 +1278,11 @@ export async function getTransactions(
   }>
 > {
   try {
+    if (await isDemoModeEnabled()) {
+      const demoData = createDemoTransactionPageData(filters);
+      return { success: true, data: demoData };
+    }
+
     const userId = await resolveUserId();
     const period = await periodsRepo.getPeriodById(periodId);
     if (!period) {
@@ -1360,6 +1385,10 @@ export async function getTransactionsForDateRange(
   }>
 > {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: createDemoTransactionRangeData() };
+    }
+
     const userId = await resolveUserId();
     const entries = await ledgerRepo.getLedgerEntriesForUserDateRange(userId, startDate, endDate);
 

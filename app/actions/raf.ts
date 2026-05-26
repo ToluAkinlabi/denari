@@ -10,6 +10,7 @@ import * as plaidRepo from '@/lib/repositories/plaid';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome } from '@/lib/finance/wealth';
 import { applyRafPeriodTransfers, calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
+import { createDemoRafPageData, isDemoModeEnabled } from '@/lib/demo-mode';
 
 export interface RafPageData {
   periodId: string;
@@ -84,6 +85,10 @@ async function withDatabaseRetry<T>(operation: () => Promise<T>): Promise<T> {
 
 export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPageData>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: createDemoRafPageData() };
+    }
+
     const resolvedUserId = await withDatabaseRetry(() => usersRepo.resolveUserId(userId));
 
     const currentPeriod = await periodsRepo.getCurrentPeriodForUser(resolvedUserId);

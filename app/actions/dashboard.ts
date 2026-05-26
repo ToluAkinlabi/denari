@@ -19,6 +19,7 @@ import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
 import { getPayCycleIndex } from '@/lib/periods';
 import { calculateTotalSpending } from '@/lib/finance/spending';
+import { createDemoDashboardData, isDemoModeEnabled } from '@/lib/demo-mode';
 import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
 import { applyRafPeriodTransfers, calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
 import {
@@ -190,6 +191,9 @@ export async function getDashboardData(
   userId?: string
 ): Promise<ApiResponse<DashboardData>> {
   try {
+    if (await isDemoModeEnabled()) {
+      return { success: true, data: await createDemoDashboardData() };
+    }
     const resolvedUserId = await usersRepo.resolveUserId(userId);
     const compareTo = options?.compareTo ?? 'PREVIOUS';
     const includeProjection = options?.includeProjection ?? true;
