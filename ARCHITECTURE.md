@@ -1,8 +1,8 @@
-# Ledge Architecture Guide
+# Denari Architecture Guide
 
 ## System Design Overview
 
-Ledge is built on a **single canonical ledger** architecture where all financial truth derives from ledger entries. This ensures financial data integrity and prevents drift.
+Denari is built on a **single canonical ledger** architecture where all financial truth derives from ledger entries. This ensures financial data integrity and prevents drift.
 
 ## 1. Core Philosophy
 
@@ -110,7 +110,7 @@ This distinction is critical.
 ### Automatic Period Assignment
 
 ```
-First Payday: January 9, 2026
+First Payday: January 16, 2026
 Cycle Length: 14 days
 
 For any date D:
@@ -120,9 +120,11 @@ For any date D:
   period_end = period_start + 13
 
 Example:
-  Jan 9 → Jan 22   (period 0)
-  Jan 23 → Feb 5   (period 1)
-  Feb 6 → Feb 19   (period 2)
+  Jan 16 → Jan 29  (period 0)
+  Jan 30 → Feb 12  (period 1)
+  Feb 13 → Feb 26  (period 2)
+  May 8 → May 21   (period 8, shown as Period #9)
+  May 22 → Jun 4   (period 9, shown as Period #10)
 ```
 
 ### Transaction Assignment

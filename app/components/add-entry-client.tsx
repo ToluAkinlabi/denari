@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState, useTransition } from 'rea
 import { Card } from '@/components/card';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { addTransaction, addDirectedIncomeEntry } from '@/app/actions/transactions';
+import { PageHero } from './page-hero';
 
 interface AddEntryClientProps {
   periodId: string;
@@ -124,10 +125,7 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
       )}
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Add Entry</h1>
-          <p className="text-muted">Log income, spending, or savings transfers</p>
-        </div>
+        <PageHero title="Add Entry" description="Capture income, spending, or savings transfers quickly without losing period context." />
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Card className="p-4">
@@ -166,8 +164,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </Card>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Amount</label>
+            <label htmlFor="add-entry-amount" className="text-sm font-medium block mb-2">Amount</label>
             <input
+              id="add-entry-amount"
               type="number"
               placeholder="0.00"
               className="input-field"
@@ -180,8 +179,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Category</label>
+            <label htmlFor="add-entry-category" className="text-sm font-medium block mb-2">Category</label>
             <select
+              id="add-entry-category"
               className="input-field"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -206,8 +206,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
               </label>
               {directToBucket && (
                 <div>
-                  <label className="text-xs text-muted block mb-1">Target bucket</label>
+                  <label htmlFor="add-entry-target-bucket" className="text-xs text-muted block mb-1">Target bucket</label>
                   <select
+                    id="add-entry-target-bucket"
                     className="input-field"
                     value={directToBucketId}
                     onChange={(e) => setDirectToBucketId(e.target.value)}
@@ -225,8 +226,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           )}
 
           <div>
-            <label className="text-sm font-medium block mb-2">Date</label>
+            <label htmlFor="add-entry-date" className="text-sm font-medium block mb-2">Date</label>
             <input
+              id="add-entry-date"
               type="date"
               className="input-field"
               value={date}
@@ -236,8 +238,9 @@ export function AddEntryClient({ periodId, categories }: AddEntryClientProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-2">Description</label>
+            <label htmlFor="add-entry-description" className="text-sm font-medium block mb-2">Description</label>
             <input
+              id="add-entry-description"
               type="text"
               placeholder="What was this for?"
               className="input-field"

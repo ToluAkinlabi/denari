@@ -21,7 +21,7 @@ import { getPayCycleIndex } from '@/lib/periods';
 import { calculateTotalSpending } from '@/lib/finance/spending';
 import { createDemoDashboardData, isDemoModeEnabled } from '@/lib/demo-mode';
 import { calculateCashflowByCategory } from '@/lib/finance/cashflow';
-import { applyRafPeriodTransfers, calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
+import { applyRafPeriodTransfers, buildRafTransferSuggestions, calculateRafPlan, getRafGuidanceConfidence, type RafPlan } from '@/lib/finance/raf';
 import {
   calculateIncome,
   calculateSavingsTransfers,
@@ -173,6 +173,126 @@ export interface DashboardData {
       change: string;
       changePercent: string;
     };
+  };
+}
+
+const RAF_CANONICAL_BUCKETS = [
+  'Spend',
+  'Partnership',
+  'Debt',
+  'Phone',
+  'Other bills',
+  'Gifts & Donations',
+  'Savings',
+  'Investments',
+  'Groceries',
+] as const;
+
+function canonicalizeRafBucketName(name: string): string | null {
+  const normalized = name.trim().toLowerCase();
+
+  if (normalized === 'spend') return 'Spend';
+  if (normalized === 'partnership') return 'Partnership';
+  if (normalized === 'debt') return 'Debt';
+  if (normalized === 'phone') return 'Phone';
+  if (normalized === 'other' || normalized === 'others' || normalized === 'rent' || normalized === 'other bills') {
+    return 'Other bills';
+  }
+  if (normalized === 'gifts' || normalized === 'gift' || normalized === 'misc' || normalized === 'gifts & donations') {
+    return 'Gifts & Donations';
+  }
+  if (normalized === 'savings') return 'Savings';
+  if (normalized === 'investment' || normalized === 'investments') return 'Investments';
+  if (normalized === 'grocery' || normalized === 'groceries') return 'Groceries';
+
+  return null;
+}
+
+function statusPriority(status: 'OPEN' | 'AT_RISK' | 'EXHAUSTED'): number {
+  if (status === 'EXHAUSTED') return 3;
+  if (status === 'AT_RISK') return 2;
+  return 1;
+}
+
+function normalizeDashboardRafPlan(plan: RafPlan): RafPlan {
+  const bucketMap = new Map<
+    string,
+    {
+      categoryId: string;
+      name: string;
+      percent: Decimal;
+      allocated: Decimal;
+      spent: Decimal;
+      remaining: Decimal;
+      status: 'OPEN' | 'AT_RISK' | 'EXHAUSTED';
+      kind: 'expense' | 'savings' | 'other';
+    }
+  >();
+
+  for (const bucket of plan.buckets) {
+    const canonicalName = canonicalizeRafBucketName(bucket.name);
+    if (!canonicalName) continue;
+
+    const existing = bucketMap.get(canonicalName);
+    const bucketPercent = new Decimal(bucket.percent.replace('%', '') || '0');
+    const bucketAllocated = new Decimal(bucket.allocated);
+    const bucketSpent = new Decimal(bucket.spent);
+    const bucketRemaining = new Decimal(bucket.remaining);
+
+    if (!existing) {
+      bucketMap.set(canonicalName, {
+        categoryId: bucket.categoryId,
+        name: canonicalName,
+        percent: bucketPercent,
+        allocated: bucketAllocated,
+        spent: bucketSpent,
+        remaining: bucketRemaining,
+        status: bucket.status,
+        kind: bucket.kind,
+      });
+      continue;
+    }
+
+    existing.percent = existing.percent.plus(bucketPercent);
+    existing.allocated = existing.allocated.plus(bucketAllocated);
+    existing.spent = existing.spent.plus(bucketSpent);
+    existing.remaining = existing.remaining.plus(bucketRemaining);
+
+    if (statusPriority(bucket.status) > statusPriority(existing.status)) {
+      existing.status = bucket.status;
+    }
+  }
+
+  const orderIndex = new Map<string, number>(
+    RAF_CANONICAL_BUCKETS.map((name, idx) => [name, idx])
+  );
+
+  const normalizedBuckets = Array.from(bucketMap.values())
+    .map((bucket) => {
+      const remainingPercent = bucket.allocated.equals(0)
+        ? new Decimal(0)
+        : bucket.remaining.dividedBy(bucket.allocated).times(100);
+
+      return {
+        categoryId: bucket.categoryId,
+        name: bucket.name,
+        percent: `${bucket.percent.toFixed(2)}%`,
+        allocated: bucket.allocated.toFixed(2),
+        spent: bucket.spent.toFixed(2),
+        remaining: bucket.remaining.toFixed(2),
+        remainingPercent: `${remainingPercent.toFixed(2)}%`,
+        status: bucket.status,
+        kind: bucket.kind,
+      };
+    })
+    .sort((left, right) => (orderIndex.get(left.name) ?? 999) - (orderIndex.get(right.name) ?? 999));
+
+  return {
+    ...plan,
+    buckets: normalizedBuckets,
+    exhaustedBuckets: normalizedBuckets.filter((bucket) => bucket.status === 'EXHAUSTED'),
+    atRiskBuckets: normalizedBuckets.filter((bucket) => bucket.status === 'AT_RISK'),
+    transferSuggestions: buildRafTransferSuggestions({ buckets: normalizedBuckets }),
   };
 }
 
@@ -397,14 +517,14 @@ export async function getDashboardData(
         rafPercent: category.rafPercent,
       })),
     });
-    const rafPlan = applyRafPeriodTransfers(
+    const rafPlan = normalizeDashboardRafPlan(applyRafPeriodTransfers(
       baseRafPlan,
       periodTransfers.map((transfer) => ({
         fromCategoryId: transfer.fromCategoryId,
         toCategoryId: transfer.toCategoryId,
         amount: transfer.amount,
       }))
-    );
+    ));
 
     const periodProgressRatio = paceMetrics.totalDays > 0
       ? new Decimal(paceMetrics.day).dividedBy(paceMetrics.totalDays)

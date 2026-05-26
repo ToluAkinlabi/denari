@@ -3,11 +3,11 @@
 import { useEffect } from 'react';
 
 /**
- * Avoid stale localhost service workers breaking Next.js module loading in development.
+ * Clear stale service worker registrations and old cache buckets.
+ * This prevents clients from being stuck on old deployments.
  */
 export function DevSwGuard() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') return;
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
 
     navigator.serviceWorker.getRegistrations().then((regs) => {
@@ -15,6 +15,16 @@ export function DevSwGuard() {
         reg.unregister();
       });
     });
+
+    if (typeof caches !== 'undefined') {
+      caches.keys().then((keys) => {
+        keys.forEach((key) => {
+          if (key.startsWith('denari-')) {
+            caches.delete(key);
+          }
+        });
+      });
+    }
   }, []);
 
   return null;

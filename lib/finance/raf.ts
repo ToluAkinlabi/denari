@@ -3,16 +3,15 @@ import { Decimal } from '@prisma/client/runtime/library';
 // Default percentage weights — each value is a relative weight.
 // Allocation = allocationBase × weight / totalWeight, so these scale with any income.
 export const DEFAULT_RAF_PERCENT_BY_NAME: Record<string, number> = {
-  Rent: 19,
-  Grocery: 7,
-  Phone: 5,
+  Spend: 20,
+  Partnership: 15,
   Debt: 14,
-  Other: 4,
-  Spend: 18,
-  Misc: 6,
-  Partnership: 16,
-  Savings: 11,
-  Investment: 6,
+  Phone: 6,
+  'Other bills': 10,
+  'Gifts & Donations': 6,
+  Savings: 12,
+  Investments: 8,
+  Groceries: 9,
 };
 
 function toDecimal(value: Decimal | number | string | null | undefined) {

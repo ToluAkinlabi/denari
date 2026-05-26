@@ -41,7 +41,7 @@ function createDemoRafPlan(): RafPlan {
     },
     {
       categoryId: 'demo-others',
-      name: 'Others',
+      name: 'Other bills',
       percent: '5.00%',
       allocated: '163.00',
       spent: '80.00',
@@ -85,7 +85,7 @@ function createDemoRafPlan(): RafPlan {
     },
     {
       categoryId: 'demo-gifts',
-      name: 'Gifts',
+      name: 'Gifts & Donations',
       percent: '5.00%',
       allocated: '163.00',
       spent: '60.00',
@@ -107,7 +107,7 @@ function createDemoRafPlan(): RafPlan {
     },
     {
       categoryId: 'demo-investment',
-      name: 'Investment',
+      name: 'Investments',
       percent: '15.00%',
       allocated: '488.00',
       spent: '100.00',
@@ -149,15 +149,15 @@ const demoRafPlan = createDemoRafPlan();
 
 function createDemoCategories() {
   return [
-    { id: 'demo-groceries', name: 'Groceries', rafPercent: 10, type: 'GROCERY' },
-    { id: 'demo-phone', name: 'Phone', rafPercent: 5, type: 'PHONE' },
-    { id: 'demo-others', name: 'Others', rafPercent: 5, type: 'OTHER' },
-    { id: 'demo-debt', name: 'Debt', rafPercent: 15, type: 'DEBT' },
     { id: 'demo-spend', name: 'Spend', rafPercent: 20, type: 'SPEND' },
     { id: 'demo-partnership', name: 'Partnership', rafPercent: 10, type: 'PARTNERSHIP' },
-    { id: 'demo-gifts', name: 'Gifts', rafPercent: 5, type: 'MISC' },
+    { id: 'demo-debt', name: 'Debt', rafPercent: 15, type: 'DEBT' },
+    { id: 'demo-phone', name: 'Phone', rafPercent: 5, type: 'PHONE' },
+    { id: 'demo-others', name: 'Other bills', rafPercent: 5, type: 'OTHER' },
+    { id: 'demo-gifts', name: 'Gifts & Donations', rafPercent: 5, type: 'MISC' },
     { id: 'demo-savings', name: 'Savings', rafPercent: 15, type: 'SAVINGS' },
-    { id: 'demo-investment', name: 'Investment', rafPercent: 15, type: 'SAVINGS' },
+    { id: 'demo-investment', name: 'Investments', rafPercent: 15, type: 'SAVINGS' },
+    { id: 'demo-groceries', name: 'Groceries', rafPercent: 10, type: 'GROCERY' },
   ];
 }
 
@@ -170,11 +170,11 @@ function createDemoTransactions() {
     { id: 'demo-tx-4', date: toIsoDate(subDays(baseDate, 3)), description: 'Savings Transfer', amount: '200.00', type: 'SAVINGS', categoryName: 'Savings', categoryId: 'demo-savings' },
     { id: 'demo-tx-5', date: toIsoDate(subDays(baseDate, 4)), description: 'Side Project Income', amount: '315.00', type: 'INCOME', categoryName: 'Income', categoryId: 'demo-income' },
     { id: 'demo-tx-6', date: toIsoDate(subDays(baseDate, 5)), description: 'Debt Payment', amount: '488.00', type: 'EXPENSE', categoryName: 'Debt', categoryId: 'demo-debt' },
-    { id: 'demo-tx-7', date: toIsoDate(subDays(baseDate, 6)), description: 'Fuel', amount: '48.52', type: 'EXPENSE', categoryName: 'Others', categoryId: 'demo-others' },
-    { id: 'demo-tx-8', date: toIsoDate(subDays(baseDate, 7)), description: 'Investment', amount: '100.00', type: 'SAVINGS', categoryName: 'Investment', categoryId: 'demo-investment' },
+    { id: 'demo-tx-7', date: toIsoDate(subDays(baseDate, 6)), description: 'Fuel', amount: '48.52', type: 'EXPENSE', categoryName: 'Other bills', categoryId: 'demo-others' },
+    { id: 'demo-tx-8', date: toIsoDate(subDays(baseDate, 7)), description: 'Investment', amount: '100.00', type: 'SAVINGS', categoryName: 'Investments', categoryId: 'demo-investment' },
     { id: 'demo-tx-9', date: toIsoDate(subDays(baseDate, 8)), description: 'Restaurant', amount: '36.40', type: 'EXPENSE', categoryName: 'Spend', categoryId: 'demo-spend' },
     { id: 'demo-tx-10', date: toIsoDate(subDays(baseDate, 9)), description: 'Cash Refund', amount: '22.00', type: 'INCOME', categoryName: 'Income', categoryId: 'demo-income' },
-    { id: 'demo-tx-11', date: toIsoDate(subDays(baseDate, 10)), description: 'Birthday Gift', amount: '45.00', type: 'EXPENSE', categoryName: 'Gifts', categoryId: 'demo-gifts' },
+    { id: 'demo-tx-11', date: toIsoDate(subDays(baseDate, 10)), description: 'Birthday Gift', amount: '45.00', type: 'EXPENSE', categoryName: 'Gifts & Donations', categoryId: 'demo-gifts' },
     { id: 'demo-tx-12', date: toIsoDate(subDays(baseDate, 11)), description: 'Coffee', amount: '7.25', type: 'EXPENSE', categoryName: 'Spend', categoryId: 'demo-spend' },
     { id: 'demo-tx-13', date: toIsoDate(subDays(baseDate, 12)), description: 'Gig Income', amount: '180.00', type: 'INCOME', categoryName: 'Income', categoryId: 'demo-income' },
     { id: 'demo-tx-14', date: toIsoDate(subDays(baseDate, 13)), description: 'Partner Dinner', amount: '85.00', type: 'EXPENSE', categoryName: 'Partnership', categoryId: 'demo-partnership' },

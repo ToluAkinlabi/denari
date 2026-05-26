@@ -1,10 +1,10 @@
-# Ledge - Quick Start Guide
+# Denari - Quick Start Guide
 
 ## 🚀 Getting Started in 5 Minutes
 
 ### Step 1: Clone the Repository
 ```bash
-cd ledge
+cd denari
 ```
 
 ### Step 2: Install Dependencies
@@ -62,7 +62,7 @@ Visit `http://localhost:3000` 🎉
 ## 🔧 Project Structure
 
 ```
-ledge/
+denari/
 ├── app/                    # Next.js pages and layouts
 │   ├── page.tsx           # Dashboard (/)
 │   ├── add/page.tsx       # Add transaction (/add)
@@ -143,9 +143,11 @@ Description: Farmer's market
 ### Biweekly Periods
 
 Transactions automatically assign to the correct period:
-- Jan 9-22 (Period 1)
-- Jan 23 - Feb 5 (Period 2)
-- Feb 6-19 (Period 3)
+- Jan 16-29 (Period 1)
+- Jan 30 - Feb 12 (Period 2)
+- Feb 13-26 (Period 3)
+- May 8-21 (Period 9)
+- May 22 - Jun 4 (Period 10)
 - etc.
 
 Manual period override supported.
@@ -172,7 +174,7 @@ Manual period override supported.
 This is crucial for trust:
 
 1. **Check Your Bank** - Get actual closing balance
-2. **Enter in Ledge** - Input actual cash
+2. **Enter in Denari** - Input actual cash
 3. **Compare** - Expected vs Actual
 4. **Adjust** - If mismatch, log missing transaction
 
@@ -208,7 +210,7 @@ DATABASE_URL="postgresql://..."
 
 # Optional
 NEXT_PUBLIC_ENABLE_PWA="true"
-NEXT_PUBLIC_FIRST_PAYDAY="2026-01-09"
+NEXT_PUBLIC_FIRST_PAYDAY="2026-01-16"
 NEXT_PUBLIC_PAY_CYCLE_DAYS="14"
 ```
 

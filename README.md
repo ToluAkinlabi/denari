@@ -1,4 +1,4 @@
-# Ledge - Personal Financial Command Center
+# Denari - Personal Financial Command Center
 
 A mobile-first personal finance web application that replaces complex Excel financial trackers.
 
@@ -16,7 +16,7 @@ A mobile-first personal finance web application that replaces complex Excel fina
 
 ### Financial Distinction
 
-Ledge maintains strict separation of four financial concepts:
+Denari maintains strict separation of four financial concepts:
 
 - **Cash** - Money in checking/liquid accounts
 - **Spending** - Money consumed and gone
@@ -50,7 +50,7 @@ Ledge maintains strict separation of four financial concepts:
 
 1. **Clone the repository**
    ```bash
-   cd ledge
+   cd denari
    ```
 
 2. **Install dependencies**
@@ -60,13 +60,15 @@ Ledge maintains strict separation of four financial concepts:
 
 3. **Configure environment**
    ```bash
-   cp .env.example .env.local
+   cp .env.example .env
    ```
    
-   Edit `.env.local` and add your Neon database URL:
+   Edit `.env` and add your Neon database URL. Prisma reads `.env` by default, and Next.js will also load it for server-side code.
    ```
    DATABASE_URL="postgresql://user:password@ep-xxxxx.us-east-1.neon.tech/neondb?sslmode=require"
    ```
+
+   If you need browser-safe overrides for local UI flags, add an optional `.env.local` for `NEXT_PUBLIC_*` values.
 
 4. **Initialize database**
    ```bash
@@ -86,7 +88,7 @@ Ledge maintains strict separation of four financial concepts:
 ### iOS
 1. Open app in Safari
 2. Tap Share → Add to Home Screen
-3. Enter "Ledge" as name
+3. Enter "Denari" as name
 4. Tap Add
 
 ### Android
@@ -106,7 +108,7 @@ Single user for personal use
 
 ### Periods
 Biweekly pay periods (14-day cycles)
-- First payday: January 9, 2026
+- First payday: January 16, 2026
 - Auto-calculated period tracking
 
 ### LedgerEntries
@@ -149,7 +151,7 @@ Financial Score = Multi-factor evaluation (0-100)
 
 Pay periods are automatically calculated:
 
-- **First payday**: January 9, 2026
+- **First payday**: January 16, 2026
 - **Cycle length**: 14 days
 - **Period formula**: 
   ```
@@ -157,6 +159,11 @@ Pay periods are automatically calculated:
   period_start = first_payday + (period_index * 14)
   period_end = period_start + 13 days
   ```
+
+Current sequence example:
+- Period 9: May 8 - May 21
+- Period 10: May 22 - Jun 4
+- Period 11: Jun 5 - Jun 18
 
 Transactions automatically map to the correct period.
 
@@ -236,7 +243,7 @@ npm start
 ## 📝 Project Structure
 
 ```
-ledge/
+denari/
 ├── app/                    # Next.js App Router
 │   ├── components/         # React components
 │   ├── add/               # Add transaction page

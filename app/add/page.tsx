@@ -1,5 +1,6 @@
 import { AddEntryClient } from '@/components/add-entry-client';
 import { getAddEntryOptions } from '@/app/actions/transactions';
+import { PageHero } from '@/app/components/page-hero';
 
 export default async function AddPage() {
   const options = await getAddEntryOptions();
@@ -7,7 +8,7 @@ export default async function AddPage() {
   if (!options.success || !options.data) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Add Entry</h1>
+        <PageHero title="Add Entry" description="Capture income, spending, or savings transfers quickly without losing period context." />
         <p className="text-muted mt-2">{options.error ?? 'Could not load categories and period.'}</p>
       </div>
     );

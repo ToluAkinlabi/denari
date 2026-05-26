@@ -9,7 +9,8 @@ import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome } from '@/lib/finance/wealth';
-import { applyRafPeriodTransfers, calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
+import { Decimal } from '@prisma/client/runtime/library';
+import { applyRafPeriodTransfers, buildRafTransferSuggestions, calculateRafPlan, type RafPlan } from '@/lib/finance/raf';
 import { createDemoRafPageData, isDemoModeEnabled } from '@/lib/demo-mode';
 
 export interface RafPageData {
@@ -48,6 +49,156 @@ export interface ApiResponse<T> {
 
 const DB_RETRY_ATTEMPTS = 2;
 const DB_RETRY_DELAY_MS = 1200;
+
+const RAF_BUCKET_ORDER = [
+  'Spend',
+  'Partnership',
+  'Debt',
+  'Phone',
+  'Other bills',
+  'Gifts & Donations',
+  'Savings',
+  'Investments',
+  'Groceries',
+] as const;
+
+const RAF_BUCKET_ORDER_INDEX = new Map<string, number>(
+  RAF_BUCKET_ORDER.map((name, index) => [name, index])
+);
+
+function canonicalizeRafBucketName(name: string): string {
+  const normalized = name.trim().toLowerCase();
+
+  if (normalized === 'spend') return 'Spend';
+  if (normalized === 'partnership') return 'Partnership';
+  if (normalized === 'debt') return 'Debt';
+  if (normalized === 'phone') return 'Phone';
+  if (normalized === 'other' || normalized === 'others' || normalized === 'rent') return 'Other bills';
+  if (normalized === 'gifts' || normalized === 'gift' || normalized === 'misc') return 'Gifts & Donations';
+  if (normalized === 'savings') return 'Savings';
+  if (normalized === 'investment' || normalized === 'investments') return 'Investments';
+  if (normalized === 'grocery' || normalized === 'groceries') return 'Groceries';
+
+  return name;
+}
+
+function getStatusSeverity(status: 'OPEN' | 'AT_RISK' | 'EXHAUSTED'): number {
+  if (status === 'EXHAUSTED') return 3;
+  if (status === 'AT_RISK') return 2;
+  return 1;
+}
+
+function normalizeRafPlan(plan: RafPlan): RafPlan {
+  const bucketMap = new Map<
+    string,
+    {
+      categoryId: string;
+      name: string;
+      percent: Decimal;
+      allocated: Decimal;
+      spent: Decimal;
+      remaining: Decimal;
+      status: 'OPEN' | 'AT_RISK' | 'EXHAUSTED';
+      kind: 'expense' | 'savings' | 'other';
+    }
+  >();
+
+  for (const bucket of plan.buckets) {
+    const canonicalName = canonicalizeRafBucketName(bucket.name);
+    const existing = bucketMap.get(canonicalName);
+
+    if (!existing) {
+      bucketMap.set(canonicalName, {
+        categoryId: bucket.categoryId,
+        name: canonicalName,
+        percent: new Decimal(bucket.percent.replace('%', '') || '0'),
+        allocated: new Decimal(bucket.allocated),
+        spent: new Decimal(bucket.spent),
+        remaining: new Decimal(bucket.remaining),
+        status: bucket.status,
+        kind: bucket.kind,
+      });
+      continue;
+    }
+
+    existing.percent = existing.percent.plus(new Decimal(bucket.percent.replace('%', '') || '0'));
+    existing.allocated = existing.allocated.plus(new Decimal(bucket.allocated));
+    existing.spent = existing.spent.plus(new Decimal(bucket.spent));
+    existing.remaining = existing.remaining.plus(new Decimal(bucket.remaining));
+    if (getStatusSeverity(bucket.status) > getStatusSeverity(existing.status)) {
+      existing.status = bucket.status;
+    }
+  }
+
+  const normalizedBuckets = Array.from(bucketMap.values())
+    .map((bucket) => {
+      const remainingPercent = bucket.allocated.equals(0)
+        ? new Decimal(0)
+        : bucket.remaining.dividedBy(bucket.allocated).times(100);
+
+      return {
+        categoryId: bucket.categoryId,
+        name: bucket.name,
+        percent: `${bucket.percent.toFixed(2)}%`,
+        allocated: bucket.allocated.toFixed(2),
+        spent: bucket.spent.toFixed(2),
+        remaining: bucket.remaining.toFixed(2),
+        remainingPercent: `${remainingPercent.toFixed(2)}%`,
+        status: bucket.status,
+        kind: bucket.kind,
+      };
+    })
+    .sort((left, right) => {
+      const leftOrder = RAF_BUCKET_ORDER_INDEX.get(left.name) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = RAF_BUCKET_ORDER_INDEX.get(right.name) ?? Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return left.name.localeCompare(right.name);
+    });
+
+  const normalizedTransferSuggestions = buildRafTransferSuggestions({ buckets: normalizedBuckets });
+  const baseWarnings = plan.warnings.filter(
+    (warning) => !warning.includes(' is exhausted by $') && !warning.startsWith('Consider moving about $')
+  );
+  const exhaustedWarnings = normalizedBuckets
+    .filter((bucket) => bucket.status === 'EXHAUSTED')
+    .map((bucket) => `${bucket.name} is exhausted by $${new Decimal(bucket.remaining).abs().toFixed(2)}.`);
+  const transferWarnings = normalizedTransferSuggestions.map(
+    (suggestion) => `Consider moving about $${suggestion.amount} from ${suggestion.fromBucket} to ${suggestion.toBucket}.`
+  );
+
+  return {
+    ...plan,
+    buckets: normalizedBuckets,
+    exhaustedBuckets: normalizedBuckets.filter((bucket) => bucket.status === 'EXHAUSTED'),
+    atRiskBuckets: normalizedBuckets.filter((bucket) => bucket.status === 'AT_RISK'),
+    transferSuggestions: normalizedTransferSuggestions,
+    warnings: [...baseWarnings, ...exhaustedWarnings, ...transferWarnings],
+  };
+}
+
+function normalizeCategoriesForRaf(
+  categories: Array<{ id: string; name: string; type: string; rafPercent: number }>
+): Array<{ id: string; name: string; type: string; rafPercent: number }> {
+  const deduped = new Map<string, { id: string; name: string; type: string; rafPercent: number }>();
+
+  for (const category of categories) {
+    const canonicalName = canonicalizeRafBucketName(category.name);
+    const existing = deduped.get(canonicalName);
+    if (!existing) {
+      deduped.set(canonicalName, {
+        ...category,
+        name: canonicalName,
+      });
+    }
+  }
+
+  return Array.from(deduped.values()).sort((left, right) => {
+    const leftOrder = RAF_BUCKET_ORDER_INDEX.get(left.name) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = RAF_BUCKET_ORDER_INDEX.get(right.name) ?? Number.MAX_SAFE_INTEGER;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return left.name.localeCompare(right.name);
+  });
+}
 
 function isDatabaseUnavailableError(error: unknown): boolean {
   const message = (error as Error)?.message ?? '';
@@ -137,14 +288,14 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         rafPercent: c.rafPercent,
       })),
     });
-    const rafPlan = applyRafPeriodTransfers(
+    const rafPlan = normalizeRafPlan(applyRafPeriodTransfers(
       baseRafPlan,
       periodTransfers.map((transfer) => ({
         fromCategoryId: transfer.fromCategoryId,
         toCategoryId: transfer.toCategoryId,
         amount: transfer.amount,
       }))
-    );
+    ));
 
     const today = startOfDay(new Date());
     const totalDays = differenceInCalendarDays(periodEnd, periodStart) + 1;
@@ -155,8 +306,15 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
     const endStr = new Date(currentPeriod.endDate).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 
     const defaultRafByName: Record<string, number> = {
-      Rent: 0, Grocery: 7, Phone: 5, Debt: 14, Other: 4,
-      Spend: 21, Misc: 7, Partnership: 20, Savings: 14, Investment: 8,
+      Spend: 20,
+      Partnership: 15,
+      Debt: 14,
+      Phone: 6,
+      'Other bills': 10,
+      'Gifts & Donations': 6,
+      Savings: 12,
+      Investments: 8,
+      Groceries: 9,
     };
     const rafTotal = categories.reduce((sum, c) => sum + Number(c.rafPercent ?? 0), 0);
     const hasConfiguredRaf = rafTotal > 0;
@@ -182,16 +340,21 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
           amount: transfer.amount.toFixed(2),
           createdAt: transfer.createdAt.toISOString(),
         })),
-        categories: categories
-          .filter((c) => c.type !== 'INCOME')
-          .map((c) => ({
-            id: c.id,
-            name: c.name,
-            type: c.type,
-            rafPercent: hasConfiguredRaf
-              ? Number(c.rafPercent ?? 0)
-              : defaultRafByName[c.name] ?? Number(c.rafPercent ?? 0),
-          })),
+        categories: normalizeCategoriesForRaf(
+          categories
+            .filter((c) => c.type !== 'INCOME')
+            .map((c) => {
+              const canonicalName = canonicalizeRafBucketName(c.name);
+              return {
+                id: c.id,
+                name: canonicalName,
+                type: c.type,
+                rafPercent: hasConfiguredRaf
+                  ? Number(c.rafPercent ?? 0)
+                  : defaultRafByName[canonicalName] ?? Number(c.rafPercent ?? 0),
+              };
+            })
+        ),
         periodProgressPercent,
       },
     };

@@ -1,4 +1,4 @@
-# Ledge - Project Initialization Complete ✅
+# Denari - Project Initialization Complete ✅
 
 ## 📋 Complete Deliverable Summary
 
@@ -15,7 +15,7 @@ A fully-architected personal finance web application with:
 ## 📁 Project Structure Generated
 
 ```
-ledge/
+denari/
 ├── 📄 package.json                # Dependencies & scripts
 ├── 📄 tsconfig.json               # TypeScript configuration
 ├── 📄 next.config.js              # Next.js configuration
@@ -90,7 +90,7 @@ ledge/
 ### Data Model
 - ✅ Single canonical ledger architecture
 - ✅ 10 financial categories
-- ✅ Biweekly period system (Jan 9, 2026 start)
+- ✅ Biweekly period system (Jan 16, 2026 start)
 - ✅ Transaction vs summary entry support
 - ✅ Savings allocations with buckets
 - ✅ Notes system for tracking
@@ -227,13 +227,15 @@ Financial Score     = Multi-factor evaluation (0-100)
 ### Biweekly Period System
 
 ```
-First Payday: January 9, 2026
+First Payday: January 16, 2026
 Cycle: 14 days
 
 Periods:
-Jan 9-22 (Period 0)
-Jan 23-Feb 5 (Period 1)
-Feb 6-19 (Period 2)
+Jan 16-29 (Period 0)
+Jan 30-Feb 12 (Period 1)
+Feb 13-26 (Period 2)
+May 8-21 (Period 8 / shown as Period #9)
+May 22-Jun 4 (Period 9 / shown as Period #10)
 ...
 
 Auto-assignment: 
@@ -548,7 +550,7 @@ All foundation is in place. Your next steps:
 
 ## 🎉 Project Complete!
 
-**Ledge is ready for development.**
+**Denari is ready for development.**
 
 All architecture, patterns, and foundations are in place. The next phase is implementing the specific features and integrating the API/database layer.
 

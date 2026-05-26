@@ -18,6 +18,7 @@ import {
 } from '@/app/actions/plaid';
 import { formatDateDisplay } from '@/lib/utils';
 import { Trash2, Edit2, X, Check } from 'lucide-react';
+import { PageHero } from '@/app/components/page-hero';
 
 interface Transaction {
   id: string;
@@ -237,7 +238,7 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Transactions</h1>
+        <PageHero title="Transactions" description="Review cash activity, resolve bank imports, and keep the current period clean." />
         <p className="text-muted mt-2">Loading...</p>
       </div>
     );
@@ -246,7 +247,7 @@ export default function TransactionsPage() {
   if (error) {
     return (
       <div className="max-w-screen-sm mx-auto px-4 py-6">
-        <h1 className="text-3xl font-bold">Transactions</h1>
+        <PageHero title="Transactions" description="Review cash activity, resolve bank imports, and keep the current period clean." />
         <p className="text-red-600 mt-2">{error}</p>
       </div>
     );
@@ -255,10 +256,7 @@ export default function TransactionsPage() {
   return (
     <div className="max-w-screen-sm mx-auto px-4 py-6 pb-20">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Transactions</h1>
-          <p className="text-muted">Manage entries for current period</p>
-        </div>
+        <PageHero title="Transactions" description="Manage current-period entries, review Plaid imports, and keep cashflow aligned." />
 
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between gap-3">

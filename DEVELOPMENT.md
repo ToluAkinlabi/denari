@@ -1,4 +1,4 @@
-# Ledge Development Checklist
+# Denari Development Checklist
 
 Use this checklist to track development progress and ensure nothing is missed.
 

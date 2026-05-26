@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Providers } from './providers';
 import { Navigation } from '@/components/navigation';
 import { DevSwGuard } from '@/components/dev-sw-guard';
@@ -9,6 +9,17 @@ export const metadata: Metadata = {
   title: 'Denari - Personal Financial Command Center',
   description: 'Track cash, spending, savings, and wealth growth',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/denari-favicon.svg?v=20260526', type: 'image/svg+xml', sizes: 'any' },
+    ],
+    shortcut: [
+      { url: '/denari-favicon.svg?v=20260526', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/icon.svg?v=20260526' },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -17,6 +28,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({
@@ -28,10 +43,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#0ea5e9" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="icon" href="/icon.svg" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body className="bg-app-atmosphere text-gray-900">
         <Providers>
