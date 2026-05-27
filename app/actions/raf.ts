@@ -410,6 +410,25 @@ export async function savePeriodRafAllocations(input: {
       }
     }
 
+    if (input.allocations.length > 0) {
+      const totalPercent = input.allocations.reduce((sum, alloc) => sum + alloc.rafPercent, 0);
+      const remainingPercent = 100 - totalPercent;
+
+      if (Math.abs(remainingPercent) >= 0.01) {
+        if (remainingPercent > 0) {
+          return {
+            success: false,
+            error: `Allocation must total 100%. ${remainingPercent.toFixed(2)}% is still unallocated.`,
+          };
+        }
+
+        return {
+          success: false,
+          error: `Allocation must total 100%. ${Math.abs(remainingPercent).toFixed(2)}% is over-allocated.`,
+        };
+      }
+    }
+
     await periodRafAllocationsRepo.setPeriodRafAllocations(
       resolvedUserId,
       input.periodId,

@@ -70,6 +70,10 @@ export function RafPageContent({ data }: RafPageContentProps) {
   const [allocStatus, setAllocStatus] = useState('');
 
   const allocationTotal = allocations.reduce((sum, a) => sum + (Number(a.rafPercent) || 0), 0);
+  const allocationDelta = 100 - allocationTotal;
+  const isAllocationValid = Math.abs(allocationDelta) < 0.01;
+  const isUnderAllocated = allocationDelta > 0.01;
+  const isOverAllocated = allocationDelta < -0.01;
 
   const income = Number(data.income);
   const allocationBase = Number(data.allocationBase);
@@ -238,7 +242,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
                         )
                       );
                     }}
-                    className="w-20 text-right border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-900"
+                    className="w-20 text-right border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-900 text-slate-900 dark:text-slate-100"
                   />
                   <span className="text-sm text-muted">%</span>
                 </div>
@@ -248,11 +252,15 @@ export function RafPageContent({ data }: RafPageContentProps) {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex items-center justify-between">
               <span className="text-sm text-muted">
                 Total:{' '}
-                <span className={Math.abs(allocationTotal - 100) < 0.01 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                <span className={isAllocationValid ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
                   {allocationTotal.toFixed(2)}%
                 </span>
-                {Math.abs(allocationTotal - 100) > 0.01 && (
-                  <span className="ml-1 text-xs text-amber-500">(weights, not required to sum to 100)</span>
+                {!isAllocationValid && (
+                  <span className="ml-1 text-xs text-amber-600">
+                    {isUnderAllocated
+                      ? `(${allocationDelta.toFixed(2)}% left unallocated)`
+                      : `(${Math.abs(allocationDelta).toFixed(2)}% over-allocated)`}
+                  </span>
                 )}
               </span>
             </div>
@@ -263,11 +271,26 @@ export function RafPageContent({ data }: RafPageContentProps) {
               </p>
             )}
 
+            {!isAllocationValid && (
+              <p className="text-xs text-amber-700">
+                Allocation must total exactly 100.00% before you can save.
+              </p>
+            )}
+
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                disabled={isPending}
+                disabled={isPending || !isAllocationValid}
                 onClick={() => {
+                  if (!isAllocationValid) {
+                    setAllocStatus(
+                      isUnderAllocated
+                        ? `Error: ${allocationDelta.toFixed(2)}% remains unallocated.`
+                        : `Error: ${Math.abs(allocationDelta).toFixed(2)}% is over-allocated.`
+                    );
+                    return;
+                  }
+
                   startTransition(async () => {
                     setAllocStatus('');
                     const result = await savePeriodRafAllocations({
