@@ -121,11 +121,11 @@
   }
 
   .text-muted {
-    @apply text-slate-700;
+    @apply text-slate-900;
   }
 
   .text-subtle {
-    @apply text-slate-600;
+    @apply text-slate-800;
   }
 
   .divider {
