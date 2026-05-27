@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Users table - single user for personal use
@@ -18,14 +19,15 @@ model User {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  categories        Category[]
-  periods           Period[]
-  ledgerEntries     LedgerEntry[]
-  savingsAllocations SavingsAllocation[]
-  rafTransfers      RafTransfer[]
-  plaidConnection   PlaidConnection?
+  categories           Category[]
+  periods              Period[]
+  ledgerEntries        LedgerEntry[]
+  savingsAllocations   SavingsAllocation[]
+  rafTransfers         RafTransfer[]
+  periodRafAllocations PeriodRafAllocation[]
+  plaidConnection      PlaidConnection?
   importedTransactions ImportedBankTransaction[]
-  notes             Note[]
+  notes                Note[]
 }
 
 // Categories - financial categorization
@@ -53,6 +55,7 @@ model Category {
   ledgerEntries LedgerEntry[]
   outboundRafTransfers RafTransfer[] @relation("RafTransferFromCategory")
   inboundRafTransfers  RafTransfer[] @relation("RafTransferToCategory")
+  periodRafAllocations PeriodRafAllocation[]
   importedTransactions ImportedBankTransaction[]
 
   @@unique([userId, name])
@@ -81,11 +84,11 @@ enum CategoryGroup {
   INCOME
 }
 
-// Periods - biweekly pay periods
+// Periods - monthly pay periods
 model Period {
   id                    String   @id @default(cuid())
   userId                String
-  label                 String   // e.g., "Jan 9 - Jan 22"
+  label                 String   // e.g., "May 2026"
   payDate               DateTime // Payday of this period
   startDate             DateTime
   endDate               DateTime
@@ -97,10 +100,11 @@ model Period {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ledgerEntries LedgerEntry[]
-  rafTransfers  RafTransfer[]
-  periodNotes   Note[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledgerEntries        LedgerEntry[]
+  rafTransfers         RafTransfer[]
+  rafAllocations       PeriodRafAllocation[]
+  periodNotes          Note[]
 
   @@unique([userId, startDate, endDate])
   @@index([userId])
@@ -251,6 +255,25 @@ model SavingsAllocation {
 
   @@index([userId])
   @@index([ledgerEntryId])
+}
+
+// PeriodRafAllocation - per-period RAF bucket percentage overrides set at the start of each month
+model PeriodRafAllocation {
+  id         String   @id @default(cuid())
+  userId     String
+  periodId   String
+  categoryId String
+  rafPercent Decimal  @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period   Period   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, categoryId])
+  @@index([userId])
+  @@index([periodId])
 }
 
 // Notes - flexible notes on transactions, periods, or summaries

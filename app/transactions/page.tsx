@@ -463,11 +463,11 @@ export default function TransactionsPage() {
                           <>
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold truncate">{transaction.description}</h3>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border border-blue-200 dark:border-blue-800 shrink-0 font-medium">
                                 {transaction.type}
                               </span>
                             </div>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-muted">
+                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-700 dark:text-slate-300">
                               <span>{formatDateDisplay(transaction.date)}</span>
                               {transaction.categoryName && (
                                 <>

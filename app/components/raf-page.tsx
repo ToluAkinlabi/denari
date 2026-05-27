@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, RefreshCw, RotateCcw } from 'lucide-react';
+import { ArrowRight, RefreshCw, RotateCcw, Settings2 } from 'lucide-react';
 import { Card } from './card';
 import { ReportsContent } from './reports-content';
 import type { RafPageData } from '@/app/actions/raf';
 import { applyRafTransferSuggestion, undoRafTransfer } from '@/app/actions/settings';
+import { savePeriodRafAllocations } from '@/app/actions/raf';
 
 interface RafPageContentProps {
   data: RafPageData;
@@ -47,12 +48,28 @@ export function RafPageContent({ data }: RafPageContentProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState('');
-  const [activeTab, setActiveTab] = useState<'raf' | 'reports'>('raf');
+  const [activeTab, setActiveTab] = useState<'raf' | 'allocate' | 'reports'>('raf');
 
   // Transfer form state
   const [fromId, setFromId] = useState('');
   const [toId, setToId] = useState('');
   const [transferAmt, setTransferAmt] = useState('');
+
+  // Allocation state — initialise from period overrides if set, else from category defaults
+  const buildInitialAllocations = () => {
+    const overrideMap = new Map(data.periodAllocations.map((a) => [a.categoryId, a.rafPercent]));
+    return data.categories
+      .filter((c) => c.type !== 'INCOME')
+      .map((c) => ({
+        categoryId: c.id,
+        name: c.name,
+        rafPercent: overrideMap.has(c.id) ? overrideMap.get(c.id)! : c.rafPercent,
+      }));
+  };
+  const [allocations, setAllocations] = useState(buildInitialAllocations);
+  const [allocStatus, setAllocStatus] = useState('');
+
+  const allocationTotal = allocations.reduce((sum, a) => sum + (Number(a.rafPercent) || 0), 0);
 
   const income = Number(data.income);
   const allocationBase = Number(data.allocationBase);
@@ -139,7 +156,7 @@ export function RafPageContent({ data }: RafPageContentProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Resource Allocation</h1>
-        <p className="text-sm text-muted mt-0.5">Period #{data.periodIndex} · {data.periodRange}</p>
+        <p className="text-sm text-blue-700 mt-0.5">Period #{data.periodIndex} · {data.periodRange}</p>
       </div>
 
       <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
@@ -156,6 +173,21 @@ export function RafPageContent({ data }: RafPageContentProps) {
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('allocate')}
+          className={`flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
+            activeTab === 'allocate'
+              ? 'bg-sky-600 text-white border-sky-500'
+              : 'bg-white/80 dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <Settings2 size={12} />
+          Allocate
+          {data.periodAllocations.length > 0 && (
+            <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" title="Custom allocation set" />
+          )}
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('reports')}
           className={`px-3 py-2 rounded-full text-xs font-semibold whitespace-nowrap border ${
             activeTab === 'reports'
@@ -168,6 +200,125 @@ export function RafPageContent({ data }: RafPageContentProps) {
       </div>
 
       {activeTab === 'reports' && <ReportsContent embedded />}
+
+      {activeTab === 'allocate' && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs text-muted uppercase tracking-wide mb-1">Monthly RAF Allocation</p>
+            <p className="text-sm text-muted">
+              Set how income is split across buckets for{' '}
+              <span className="font-semibold text-foreground">{data.periodRange}</span>.
+              {data.periodAllocations.length > 0 ? (
+                <span className="ml-1 text-emerald-600 font-medium">Custom allocation active.</span>
+              ) : (
+                <span className="ml-1 text-gray-500">Using default percentages.</span>
+              )}
+            </p>
+          </Card>
+
+          <Card className="p-4 space-y-3">
+            {allocations.map((alloc) => (
+              <div key={alloc.categoryId} className="flex items-center gap-3">
+                <label className="flex-1 text-sm font-medium truncate" htmlFor={`alloc-${alloc.categoryId}`}>
+                  {alloc.name}
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id={`alloc-${alloc.categoryId}`}
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={alloc.rafPercent}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
+                      setAllocations((prev) =>
+                        prev.map((a) =>
+                          a.categoryId === alloc.categoryId ? { ...a, rafPercent: val } : a
+                        )
+                      );
+                    }}
+                    className="w-20 text-right border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-sm bg-white dark:bg-gray-900"
+                  />
+                  <span className="text-sm text-muted">%</span>
+                </div>
+              </div>
+            ))}
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex items-center justify-between">
+              <span className="text-sm text-muted">
+                Total:{' '}
+                <span className={Math.abs(allocationTotal - 100) < 0.01 ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                  {allocationTotal.toFixed(2)}%
+                </span>
+                {Math.abs(allocationTotal - 100) > 0.01 && (
+                  <span className="ml-1 text-xs text-amber-500">(weights, not required to sum to 100)</span>
+                )}
+              </span>
+            </div>
+
+            {allocStatus && (
+              <p className={`text-sm ${allocStatus.startsWith('Error') ? 'text-red-600' : 'text-emerald-600'}`}>
+                {allocStatus}
+              </p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  startTransition(async () => {
+                    setAllocStatus('');
+                    const result = await savePeriodRafAllocations({
+                      periodId: data.periodId,
+                      allocations: allocations.map((a) => ({
+                        categoryId: a.categoryId,
+                        rafPercent: Number(a.rafPercent) || 0,
+                      })),
+                    });
+                    if (!result.success) {
+                      setAllocStatus(`Error: ${result.error}`);
+                    } else {
+                      setAllocStatus(`Allocation saved for ${data.periodRange}.`);
+                      router.refresh();
+                    }
+                  });
+                }}
+                className="flex-1 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold py-2 px-4 rounded-lg disabled:opacity-50"
+              >
+                {isPending ? 'Saving…' : 'Save Allocation'}
+              </button>
+              {data.periodAllocations.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    startTransition(async () => {
+                      setAllocStatus('');
+                      const result = await savePeriodRafAllocations({
+                        periodId: data.periodId,
+                        allocations: [],
+                      });
+                      if (!result.success) {
+                        setAllocStatus(`Error: ${result.error}`);
+                      } else {
+                        setAllocStatus('Reverted to default allocation.');
+                        setAllocations(buildInitialAllocations());
+                        router.refresh();
+                      }
+                    });
+                  }}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-700 text-sm rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+                  title="Revert to defaults"
+                >
+                  <RotateCcw size={14} />
+                </button>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
 
       {activeTab === 'raf' && (
         <>

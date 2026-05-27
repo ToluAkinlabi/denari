@@ -1,11 +1,13 @@
 'use server';
 
 import { differenceInCalendarDays, startOfDay } from 'date-fns';
+import { revalidatePath } from 'next/cache';
 import { getPayCycleIndex } from '@/lib/periods';
 import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import * as periodRafAllocationsRepo from '@/lib/repositories/period-raf-allocations';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import * as usersRepo from '@/lib/repositories/users';
 import { calculateIncome } from '@/lib/finance/wealth';
@@ -37,6 +39,11 @@ export interface RafPageData {
     name: string;
     rafPercent: number;
     type: string;
+  }>;
+  /** Per-period RAF allocation overrides. Empty array means defaults are in use. */
+  periodAllocations: Array<{
+    categoryId: string;
+    rafPercent: number;
   }>;
   periodProgressPercent: number;
 }
@@ -250,11 +257,12 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
     const periodStart = startOfDay(new Date(currentPeriod.startDate));
     const periodEnd = startOfDay(new Date(currentPeriod.endDate));
 
-    const [currentEntries, importedEntries, categories, periodTransfers] = await Promise.all([
+    const [currentEntries, importedEntries, categories, periodTransfers, periodAllocations] = await Promise.all([
       ledgerRepo.getLedgerEntriesForPeriod(currentPeriod.id),
       plaidRepo.getIncludedImportedTransactionsForDateRange(resolvedUserId, periodStart, periodEnd),
       categoriesRepo.getCategoryForecastSettingsForUser(resolvedUserId),
       rafTransfersRepo.getRafTransfersForPeriodDetailed(resolvedUserId, currentPeriod.id),
+      periodRafAllocationsRepo.getRafAllocationsForPeriod(currentPeriod.id),
     ]);
 
     const allEntries = [
@@ -286,6 +294,10 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
         countsAsExpense: c.countsAsExpense ?? false,
         countsAsSavings: c.countsAsSavings ?? false,
         rafPercent: c.rafPercent,
+      })),
+      periodAllocations: periodAllocations.map((a) => ({
+        categoryId: a.categoryId,
+        rafPercent: a.rafPercent,
       })),
     });
     const rafPlan = normalizeRafPlan(applyRafPeriodTransfers(
@@ -356,6 +368,10 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
             })
         ),
         periodProgressPercent,
+        periodAllocations: periodAllocations.map((a) => ({
+          categoryId: a.categoryId,
+          rafPercent: Number(a.rafPercent),
+        })),
       },
     };
   } catch (error) {
@@ -367,6 +383,44 @@ export async function getRafPageData(userId?: string): Promise<ApiResponse<RafPa
       };
     }
 
+    return { success: false, error: `Server error: ${(error as Error).message}` };
+  }
+}
+
+/**
+ * Save per-period RAF allocation percentages for the current (or specified) period.
+ * Calling this replaces any previous allocations for that period.
+ * Pass an empty allocations array to revert to the default profile.
+ */
+export async function savePeriodRafAllocations(input: {
+  periodId: string;
+  allocations: Array<{ categoryId: string; rafPercent: number }>;
+}): Promise<ApiResponse<void>> {
+  try {
+    if (await isDemoModeEnabled()) {
+      return { success: true };
+    }
+
+    const resolvedUserId = await usersRepo.resolveUserId();
+
+    // Validate: percentages must be non-negative and the set must not be partially empty
+    for (const alloc of input.allocations) {
+      if (alloc.rafPercent < 0) {
+        return { success: false, error: 'RAF percentages must be 0 or greater.' };
+      }
+    }
+
+    await periodRafAllocationsRepo.setPeriodRafAllocations(
+      resolvedUserId,
+      input.periodId,
+      input.allocations
+    );
+
+    revalidatePath('/raf');
+    revalidatePath('/');
+
+    return { success: true };
+  } catch (error) {
     return { success: false, error: `Server error: ${(error as Error).message}` };
   }
 }

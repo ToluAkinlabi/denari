@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import type { DashboardData } from '@/app/actions/dashboard';
 import type { MonthlyReportData } from '@/app/actions/reports';
 import type { RafPageData } from '@/app/actions/raf';
-import { startOfDay, subDays } from 'date-fns';
+import { startOfDay, subDays, startOfMonth, endOfMonth, subMonths, getDaysInMonth, differenceInCalendarDays } from 'date-fns';
 import type { RafPlan } from '@/lib/finance/raf';
 
 export const DEMO_MODE_COOKIE = 'denari-demo-mode';
@@ -11,8 +11,8 @@ function toIsoDate(value: Date) {
   return value.toISOString();
 }
 
-function formatRange(start: Date, end: Date) {
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+function formatMonthLabel(date: Date) {
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 function createDemoRafPlan(): RafPlan {
@@ -184,8 +184,9 @@ function createDemoTransactions() {
 function createDemoPeriods() {
   const now = startOfDay(new Date());
   return Array.from({ length: 8 }, (_, index) => {
-    const start = startOfDay(subDays(now, 14 * index + 13));
-    const end = startOfDay(subDays(now, 14 * index));
+    const monthDate = subMonths(now, index);
+    const start = startOfMonth(monthDate);
+    const end = endOfMonth(monthDate);
     const income = 2200 + index * 55;
     const spending = 1420 + index * 40;
     const savings = 350 + index * 18;
@@ -196,7 +197,7 @@ function createDemoPeriods() {
 
     return {
       id: `demo-period-${index + 1}`,
-      label: formatRange(start, end),
+      label: formatMonthLabel(monthDate),
       index: index + 1,
       startDate: toIsoDate(start),
       endDate: toIsoDate(end),
@@ -222,8 +223,8 @@ export async function isDemoModeEnabled() {
 
 export async function createDemoDashboardData(): Promise<DashboardData> {
   const now = new Date();
-  const periodStart = startOfDay(subDays(now, 7));
-  const periodEnd = startOfDay(now);
+  const periodStart = startOfMonth(now);
+  const periodEnd = endOfMonth(now);
 
   return {
     currentPeriod: {
@@ -234,8 +235,8 @@ export async function createDemoDashboardData(): Promise<DashboardData> {
       isReconciled: false,
     },
     paceMetrics: {
-      day: 6,
-      totalDays: 14,
+      day: differenceInCalendarDays(startOfDay(now), periodStart) + 1,
+      totalDays: getDaysInMonth(now),
       dailyBudget: '171.43',
       expectedSpend: '1028.58',
       actualSpend: '780.25',
@@ -327,13 +328,13 @@ export async function createDemoDashboardData(): Promise<DashboardData> {
 
 export function createDemoRafPageData(): RafPageData {
   const now = new Date();
-  const start = startOfDay(subDays(now, 7));
-  const end = startOfDay(now);
+  const start = startOfMonth(now);
+  const end = endOfMonth(now);
 
   return {
     periodId: 'demo-period-current',
     periodIndex: 7,
-    periodRange: formatRange(start, end),
+    periodRange: formatMonthLabel(now),
     income: '2400.00',
     carryForward: '850.00',
     allocationBase: '3250.00',
@@ -357,6 +358,7 @@ export function createDemoRafPageData(): RafPageData {
       rafPercent: category.rafPercent,
       type: category.type,
     })),
+    periodAllocations: [],
     periodProgressPercent: 43,
   };
 }

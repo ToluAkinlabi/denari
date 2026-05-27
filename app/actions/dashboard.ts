@@ -14,6 +14,7 @@ import * as periodsRepo from '@/lib/repositories/periods';
 import * as ledgerRepo from '@/lib/repositories/ledger';
 import * as categoriesRepo from '@/lib/repositories/categories';
 import * as rafTransfersRepo from '@/lib/repositories/raf-transfers';
+import * as periodRafAllocationsRepo from '@/lib/repositories/period-raf-allocations';
 import * as plaidRepo from '@/lib/repositories/plaid';
 import * as savingsRepo from '@/lib/repositories/savings';
 import * as usersRepo from '@/lib/repositories/users';
@@ -389,10 +390,11 @@ export async function getDashboardData(
       const entryDay = startOfDay(entry.date);
       return entryDay >= periodStart && entryDay <= periodEnd;
     });
-    const [importedEntries, categories, periodTransfers] = await Promise.all([
+    const [importedEntries, categories, periodTransfers, periodAllocations] = await Promise.all([
       plaidRepo.getIncludedImportedTransactionsForDateRange(resolvedUserId, periodStart, periodEnd),
       categoriesRepo.getCategoriesForUser(resolvedUserId),
       rafTransfersRepo.getRafTransfersForPeriod(resolvedUserId, currentPeriod.id),
+      periodRafAllocationsRepo.getRafAllocationsForPeriod(currentPeriod.id),
     ]);
 
     const currentEntriesWithImported = [
@@ -515,6 +517,10 @@ export async function getDashboardData(
         countsAsExpense: category.countsAsExpense ?? false,
         countsAsSavings: category.countsAsSavings ?? false,
         rafPercent: category.rafPercent,
+      })),
+      periodAllocations: periodAllocations.map((a) => ({
+        categoryId: a.categoryId,
+        rafPercent: a.rafPercent,
       })),
     });
     const rafPlan = normalizeDashboardRafPlan(applyRafPeriodTransfers(

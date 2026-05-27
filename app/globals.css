@@ -34,6 +34,19 @@
   input[type='number'] {
     -moz-appearance: textfield;
   }
+
+  input,
+  select,
+  textarea {
+    color: #0f172a;
+    caret-color: #1d4ed8;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748b;
+    opacity: 1;
+  }
 }
 
 @layer components {
@@ -77,9 +90,14 @@
   }
 
   .input-field {
-    @apply w-full px-3 py-2 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-3 py-2 rounded-lg text-slate-900 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
     border-color: #cbd5e1;
     background-color: #ffffff;
+  }
+
+  .input-field:disabled {
+    color: #334155;
+    background-color: #f8fafc;
   }
 
   .badge {

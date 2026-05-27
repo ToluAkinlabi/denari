@@ -1,18 +1,16 @@
 /**
  * Period utilities
- * Biweekly pay period calculations and management
+ * Monthly pay period calculations and management
  */
 
-import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns';
+import { startOfDay } from 'date-fns';
 
 /**
- * First payday: January 9, 2026
- * Biweekly cycle: 14 days
- * First payday is the START of period 0 (Period 0: Jan 16, 2026 - Jan 29, 2026)
- * Each period is 14 days with inclusive boundaries on both start and end dates
+ * Base period anchor: January 2026 = Period 0
+ * Each period covers a full calendar month (1st to last day).
  */
-const FIRST_PAYDAY = new Date(2026, 0, 16); // Local date: Jan 16, 2026
-const CYCLE_LENGTH_DAYS = 14;
+const BASE_YEAR = 2026;
+const BASE_MONTH = 0; // January (0-indexed)
 
 function normalizeCycleDate(date: Date): Date {
   // Prisma/Postgres date-like fields are commonly represented at UTC midnight.
@@ -31,35 +29,35 @@ function normalizeCycleDate(date: Date): Date {
 }
 
 /**
- * Get the pay cycle index for a given date
- * Payday is the START of a period.
+ * Get the pay cycle index for a given date.
+ * Period 0 = January 2026. Period index increases by 1 each calendar month.
  */
 export function getPayCycleIndex(date: Date): number {
-  const normalizedDate = normalizeCycleDate(date);
-  const normalizedFirstPayday = normalizeCycleDate(FIRST_PAYDAY);
-  const daysSinceFirstPayday = differenceInCalendarDays(normalizedDate, normalizedFirstPayday);
-
-  return Math.floor(daysSinceFirstPayday / CYCLE_LENGTH_DAYS);
+  const normalized = normalizeCycleDate(date);
+  return (normalized.getFullYear() - BASE_YEAR) * 12 + (normalized.getMonth() - BASE_MONTH);
 }
 
 /**
- * Get period start date from cycle index
- * Period 0 starts on FIRST_PAYDAY.
+ * Get period start date (1st of the month) from cycle index.
  */
 export function getPeriodStartDate(cycleIndex: number): Date {
-  return normalizeCycleDate(addDays(FIRST_PAYDAY, cycleIndex * CYCLE_LENGTH_DAYS));
+  const totalMonths = BASE_MONTH + cycleIndex;
+  const year = BASE_YEAR + Math.floor(totalMonths / 12);
+  const month = ((totalMonths % 12) + 12) % 12;
+  return startOfDay(new Date(year, month, 1));
 }
 
 /**
- * Get period end date from cycle index
- * Each period ends the day before the next payday.
+ * Get period end date (last day of the month) from cycle index.
  */
 export function getPeriodEndDate(cycleIndex: number): Date {
-  return startOfDay(addDays(getPeriodStartDate(cycleIndex), CYCLE_LENGTH_DAYS - 1));
+  const start = getPeriodStartDate(cycleIndex);
+  // Day 0 of next month = last day of this month
+  return startOfDay(new Date(start.getFullYear(), start.getMonth() + 1, 0));
 }
 
 /**
- * Get the payday (start date) for a given date
+ * Get the period start (1st of month) for a given date.
  */
 export function getPaydayForDate(date: Date): Date {
   const cycleIndex = getPayCycleIndex(date);
@@ -67,7 +65,7 @@ export function getPaydayForDate(date: Date): Date {
 }
 
 /**
- * Determine which period a date belongs to
+ * Determine which period a date belongs to.
  */
 export interface Period {
   cycleIndex: number;
@@ -92,19 +90,10 @@ export function getPeriodForDate(date: Date): Period {
 }
 
 /**
- * Format period label (e.g., "Jan 9 - Jan 22")
+ * Format period label (e.g., "May 2026")
  */
-export function formatPeriodLabel(startDate: Date, endDate: Date): string {
-  const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
-  const startDay = startDate.getDate();
-  const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
-  const endDay = endDate.getDate();
-
-  if (startMonth === endMonth) {
-    return `${startMonth} ${startDay} - ${endDay}`;
-  }
-
-  return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+export function formatPeriodLabel(startDate: Date, _endDate?: Date): string {
+  return startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 /**
@@ -112,17 +101,20 @@ export function formatPeriodLabel(startDate: Date, endDate: Date): string {
  */
 export function getPeriodsInRange(startDate: Date, endDate: Date): Period[] {
   const periods: Period[] = [];
-  let currentDate = startDate;
+  let currentIndex = getPayCycleIndex(startDate);
+  const endIndex = getPayCycleIndex(endDate);
 
-  while (currentDate <= endDate) {
-    const period = getPeriodForDate(currentDate);
-
-    // Only add if we haven't already (check if cycleIndex is different)
-    if (periods.length === 0 || periods[periods.length - 1].cycleIndex !== period.cycleIndex) {
-      periods.push(period);
-    }
-
-    currentDate = addDays(period.endDate, 1);
+  while (currentIndex <= endIndex) {
+    const pStart = getPeriodStartDate(currentIndex);
+    const pEnd = getPeriodEndDate(currentIndex);
+    periods.push({
+      cycleIndex: currentIndex,
+      startDate: pStart,
+      endDate: pEnd,
+      payDate: pStart,
+      label: formatPeriodLabel(pStart),
+    });
+    currentIndex++;
   }
 
   return periods;
@@ -171,7 +163,7 @@ export function getRecentPeriods(count: number = 4): Period[] {
       startDate,
       endDate,
       payDate: startDate,
-      label: formatPeriodLabel(startDate, endDate),
+      label: formatPeriodLabel(startDate),
     });
   }
 
@@ -189,13 +181,3 @@ export function formatDate(date: Date): string {
   });
 }
 
-/**
- * Get first payday config
- */
-export function getFirstPayday(): Date {
-  return new Date(FIRST_PAYDAY);
-}
-
-export function getCycleLength(): number {
-  return CYCLE_LENGTH_DAYS;
-}

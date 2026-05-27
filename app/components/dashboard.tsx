@@ -204,7 +204,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
       <Card className="p-4">
         <div className="flex items-center justify-between gap-2 mb-4">
           <h3 className="text-sm font-semibold">Period Summary</h3>
-          <span className="text-xs text-muted whitespace-nowrap">
+          <span className="text-xs text-blue-700 whitespace-nowrap font-medium">
             #{data.currentPeriod.index} ({periodRange})
           </span>
         </div>
@@ -212,7 +212,7 @@ export function DashboardContent({ data }: DashboardContentProps) {
           <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2">
             <div>
               <p className="text-sm font-medium">Carry Forward</p>
-              <p className="text-xs text-muted">Brought in from previous pay period</p>
+              <p className="text-xs text-slate-700">Brought in from previous pay period</p>
             </div>
             <p className={`text-sm font-semibold ${carryForwardClass}`}>
               {carryForwardSign}${data.cashMetrics.opening}

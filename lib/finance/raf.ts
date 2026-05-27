@@ -182,35 +182,59 @@ export function getRafGuidanceConfidence(input: {
   };
 }
 
+/**
+ * Per-period RAF override: maps categoryId → rafPercent weight for this month only.
+ * When provided, these values supersede both configured rafPercent and defaults.
+ */
+export interface RafPeriodAllocationInput {
+  categoryId: string;
+  rafPercent: Decimal | number | string;
+}
+
 export function calculateRafPlan(input: {
   income: Decimal | number | string;
   carryForward?: Decimal | number | string;
   entries: RafEntryInput[];
   categories: RafCategoryInput[];
+  /** Optional per-period overrides — if any are present, ALL category weights come from this map */
+  periodAllocations?: RafPeriodAllocationInput[];
 }): RafPlan {
   const income = toDecimal(input.income);
   const carryForward = toDecimal(input.carryForward);
   const allocationBase = income.plus(carryForward);
+
+  // Build a lookup for period-specific overrides keyed by categoryId
+  const periodOverrideMap = new Map<string, Decimal>(
+    (input.periodAllocations ?? []).map((a) => [a.categoryId, toDecimal(a.rafPercent)])
+  );
+  const hasPeriodOverrides = periodOverrideMap.size > 0;
+
   const configuredTotal = input.categories.reduce(
     (sum, category) => sum.plus(toDecimal(category.rafPercent)),
     new Decimal(0)
   );
-  const useDefaultProfile = configuredTotal.equals(0);
+  // Use defaults only when neither period overrides nor category-level config exists
+  const useDefaultProfile = !hasPeriodOverrides && configuredTotal.equals(0);
+
+  // Determine the effective weight for a category (period override → configured → default)
+  const getWeight = (category: RafCategoryInput): Decimal => {
+    if (hasPeriodOverrides) {
+      return periodOverrideMap.get(category.id) ?? new Decimal(0);
+    }
+    if (!useDefaultProfile) return toDecimal(category.rafPercent);
+    return new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0);
+  };
 
   const spendingCategories = input.categories.filter((category) => category.type !== 'INCOME');
-  const weightedCategoryTotal = spendingCategories.reduce((sum, category) => {
-    const weight = useDefaultProfile
-      ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
-      : toDecimal(category.rafPercent);
-    return sum.plus(weight);
-  }, new Decimal(0));
+  const weightedCategoryTotal = spendingCategories.reduce(
+    (sum, category) => sum.plus(getWeight(category)),
+    new Decimal(0)
+  );
 
   const buckets = input.categories
     .filter((category) => category.type !== 'INCOME')
     .map((category) => {
-      const weight = useDefaultProfile
-        ? new Decimal(DEFAULT_RAF_PERCENT_BY_NAME[category.name] ?? 0)
-        : toDecimal(category.rafPercent);
+      const weight = getWeight(category);
 
       const allocated = weightedCategoryTotal.greaterThan(0)
         ? allocationBase.times(weight).dividedBy(weightedCategoryTotal)
@@ -307,7 +331,7 @@ export function calculateRafPlan(input: {
     allocated: totalAllocated.toFixed(2),
     unallocated: Decimal.max(unallocated, new Decimal(0)).toFixed(2),
     overallocated: Decimal.max(overallocated, new Decimal(0)).toFixed(2),
-    profileSource: useDefaultProfile ? 'DEFAULT' : 'CONFIGURED',
+    profileSource: hasPeriodOverrides ? 'CONFIGURED' : useDefaultProfile ? 'DEFAULT' : 'CONFIGURED',
     warnings,
     buckets,
     exhaustedBuckets,

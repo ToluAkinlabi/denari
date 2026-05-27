@@ -63,7 +63,7 @@ function ReconcileForm({ period, onDone }: { period: PeriodItem; onDone: () => v
             : `⚠ Period reconciled with +$${diffFmt} discrepancy (app under-counted)`}
         </p>
         {result.hints.length > 0 && (
-          <ul className="mt-2 space-y-1 text-muted">
+          <ul className="mt-2 space-y-1 text-slate-700 dark:text-slate-300">
             {result.hints.map((h, i) => <li key={i}>• {h}</li>)}
           </ul>
         )}
@@ -76,12 +76,12 @@ function ReconcileForm({ period, onDone }: { period: PeriodItem; onDone: () => v
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 space-y-2">
-      <p className="text-xs text-muted">
+      <p className="text-xs text-slate-700 dark:text-slate-300">
         Enter your actual bank balance at the <strong>end of this period</strong>. The app will anchor all subsequent periods to this value.
       </p>
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 text-sm">$</span>
           <input
             type="number"
             min="0"
@@ -254,13 +254,13 @@ export default function PeriodsPage() {
                 </div>
 
                 {period.isReconciled && period.closingCashActual != null && (
-                  <p className="text-[11px] text-muted mb-2">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300 mb-2">
                     Anchored with actual close ${fmt(period.closingCashActual)}
                   </p>
                 )}
 
                 {/* Financials grid */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-700 dark:text-slate-300">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">+${fmt(period.income)}</p>
                     <p>Income</p>
@@ -348,7 +348,7 @@ export default function PeriodsPage() {
             <span className="text-sm font-medium">Previous</span>
           </button>
 
-          <span className="text-sm text-muted">
+          <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
             Page {data.page} of {totalPages} ({data.total} total)
           </span>
 
